@@ -1,0 +1,9 @@
+{
+  "trackedAddresses": [
+    "0x004D0221ffE03f529f7d9fCCc9d72a9AA0cCfd2e"
+  ],
+  "stratumxApi": "https://backend.stratumx.org/api",
+  "rpc": "https://rpc.quai.network/cyprus1",
+  "vault": "0x000e8FA7cFA09827f0A0786CE3E96aC5e4E9f46C",
+  "qaxeToken": "0x0035187a7660f595d93cd53a4d16c635d6cffc8f"
+}
