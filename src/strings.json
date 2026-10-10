@@ -12,8 +12,8 @@
     "tr": "İçeriğe geç"
   },
   "footer.disclaimer": {
-    "en": "QuaiAxe is a Hartii partner, a mining project on Quai; it is not affiliated with, endorsed by, or operated by Quai Network or Dominant Strategies. Nothing here is financial advice or a claim about price. Mining is a lottery. QUAI sent to a burn address is spent and cannot be returned.",
-    "tr": "QuaiAxe bir Hartii ortağıdır, Quai üzerinde bir madencilik projesidir; Quai Network veya Dominant Strategies ile bağlantılı değildir, onlar tarafından onaylanmamış veya işletilmemektedir. Buradaki hiçbir şey finansal tavsiye veya fiyat iddiası değildir. Madencilik bir şans oyunudur. Yakım adresine gönderilen QUAI harcanır ve geri alınamaz."
+    "en": "QuaiAxe × Hartii: QuaiAxe is a mining project on Quai, in partnership with Hartii; it is not affiliated with, endorsed by, or operated by Quai Network or Dominant Strategies. Nothing here is financial advice or a claim about price. Mining is a lottery. QUAI sent to a burn address is spent and cannot be returned.",
+    "tr": "QuaiAxe × Hartii: QuaiAxe, Hartii ile ortaklık içinde Quai üzerinde bir madencilik projesidir; Quai Network veya Dominant Strategies ile bağlantılı değildir, onlar tarafından onaylanmamış veya işletilmemektedir. Buradaki hiçbir şey finansal tavsiye veya fiyat iddiası değildir. Madencilik bir şans oyunudur. Yakım adresine gönderilen QUAI harcanır ve geri alınamaz."
   },
   "home.band.burned.loading": {
     "en": "reading the chain…",
