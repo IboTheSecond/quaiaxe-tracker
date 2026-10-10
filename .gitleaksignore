@@ -1,0 +1,3 @@
+# The public QAXE token contract address in config.example.json (key "qaxeToken") matches the
+# generic-api-key rule. It is a public contract address, not a secret. Only this exact finding is ignored.
+f16a1d14584cef3d08bb422662d5adbe0f9573be:config.example.json:generic-api-key:8
