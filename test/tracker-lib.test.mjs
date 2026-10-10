@@ -105,3 +105,44 @@ test('safeCount collapses hostile or missing counters to 0 instead of passing th
     if (typeof v !== 'boolean') assert.equal(out, 0, `expected 0 for ${JSON.stringify(v)}`);
   }
 });
+
+// checksumAddress: the /tracker "check your own address" box. quai_getBalance refuses an address that is not
+// in its checksummed spelling, so a pasted all-lowercase address is checksummed here before the RPC calls.
+const TRACKED = '0x004D0221ffE03f529f7d9fCCc9d72a9AA0cCfd2e'; // the site's default deposit address, already on the scanner allowlist
+
+test('checksumAddress turns the lowercase and the uppercase spelling into the checksummed one, exactly', () => {
+  assert.equal(trackerLib.checksumAddress(TRACKED.toLowerCase()), TRACKED);
+  assert.equal(trackerLib.checksumAddress('0x' + TRACKED.slice(2).toUpperCase()), TRACKED);
+  assert.equal(trackerLib.checksumAddress(`  ${TRACKED.toLowerCase()}\n`), TRACKED, 'surrounding whitespace is ignored, as isAddressShape ignores it');
+});
+
+test('checksumAddress keeps an address that is already checksummed', () => {
+  assert.equal(trackerLib.checksumAddress(TRACKED), TRACKED);
+});
+
+test('checksumAddress refuses a mixed-case address whose casing is not the checksum', () => {
+  // flip the case of one letter at a time: every one of these is mixed-case junk and must come back null
+  const letters = [...TRACKED.slice(2)].map((c, i) => [c, i]).filter(([c]) => /[a-fA-F]/.test(c));
+  assert.ok(letters.length > 10);
+  for (const [c, i] of letters) {
+    const flipped = '0x' + TRACKED.slice(2, 2 + i) + (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase()) + TRACKED.slice(3 + i);
+    assert.equal(trackerLib.checksumAddress(flipped), null, `accepted a wrongly cased address (position ${i})`);
+  }
+});
+
+test('checksumAddress refuses anything that is not 0x plus 40 hex characters', () => {
+  const lower = TRACKED.toLowerCase();
+  for (const bad of ['', null, undefined, 0, {}, [], '0x', lower.slice(0, -1), lower + '0', lower.slice(2), 'x' + lower.slice(1),
+    lower.replace(/.$/, 'g'), `${lower} ${lower}`, '<img src=x>', lower.replace('0x', '0X')]) {
+    assert.equal(trackerLib.checksumAddress(bad), null, `accepted ${JSON.stringify(bad)}`);
+  }
+});
+
+test('keccak256Hex matches the published Keccak-256 test vectors (not NIST SHA3)', () => {
+  // Keccak-256("") begins c5d24601 and Keccak-256("abc") begins 4e03657a; SHA3-256("") would begin a7ffc6f8.
+  assert.ok(trackerLib.keccak256Hex(new Uint8Array(0)).startsWith('c5d24601'));
+  assert.ok(trackerLib.keccak256Hex(new TextEncoder().encode('abc')).startsWith('4e03657a'));
+  assert.equal(trackerLib.keccak256Hex(new Uint8Array(0)).length, 64);
+  // a message longer than one 136-byte block exercises the multi-block path
+  assert.equal(trackerLib.keccak256Hex(new Uint8Array(300).fill(97)).length, 64);
+});

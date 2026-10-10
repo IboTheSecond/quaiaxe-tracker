@@ -121,3 +121,43 @@ test('assets/tracker.js writes no inline style attribute, style element or cssTe
   assert.ok(!/setAttribute\(\s*['"`]style/.test(src), 'setAttribute("style", ...)');
   assert.ok(!/cssText|<style/.test(src), 'cssText or a <style> element');
 });
+
+// The "check your own address" box. quai_getBalance refuses an address that is not in its checksummed spelling,
+// and visitors paste lowercase, so the page checksums the address before the first RPC call.
+test('a lowercase address pasted into the check box is checksummed: the node accepts it and the tiles fill', async () => {
+  const page = await startTracker();
+  page.el('trk-unlocked').textContent = 'stale';
+  page.el('trk-locked').textContent = 'stale';
+  page.clearCalls();
+  await page.check(OTHER_ADDR.toLowerCase());
+  assert.equal(page.text('trk-check-err'), '', 'no error for a valid address in the wrong casing');
+  assert.equal(page.text('trk-check-addr-out'), OTHER_ADDR, 'the address shown is the checksummed one');
+  const balanceCalls = page.rpcCalls('quai_getBalance');
+  assert.equal(balanceCalls.length, 1);
+  assert.equal(balanceCalls[0].body.params[0], OTHER_ADDR, 'quai_getBalance gets the checksummed spelling');
+  assert.equal(page.text('trk-unlocked'), '10.4938', 'unlocked QUAI is filled, not "unavailable"');
+  assert.equal(page.text('trk-locked'), '449.1304');
+  for (const c of page.rpcCalls('quai_getLockedBalance')) assert.equal(c.body.params[0], OTHER_ADDR);
+});
+
+test('an all-uppercase address in the check box is checksummed too', async () => {
+  const page = await startTracker();
+  page.clearCalls();
+  await page.check('0x' + OTHER_ADDR.slice(2).toUpperCase());
+  assert.equal(page.text('trk-check-err'), '');
+  assert.equal(page.text('trk-check-addr-out'), OTHER_ADDR);
+  assert.equal(page.text('trk-unlocked'), '10.4938');
+});
+
+test('a mixed-case address with the wrong casing is refused, with no request sent and the old address kept', async () => {
+  const page = await startTracker();
+  const before = page.text('trk-check-addr-out');
+  const letter = [...OTHER_ADDR.slice(2)].findIndex((c) => /[a-fA-F]/.test(c));
+  const flip = (c) => (c === c.toLowerCase() ? c.toUpperCase() : c.toLowerCase());
+  const wrong = '0x' + OTHER_ADDR.slice(2, 2 + letter) + flip(OTHER_ADDR[2 + letter]) + OTHER_ADDR.slice(3 + letter);
+  page.clearCalls();
+  await page.check(wrong);
+  assert.equal(page.text('trk-check-err'), page.i18n['tracker.check.err']);
+  assert.equal(page.calls.length, 0, 'nothing is sent for a refused address');
+  assert.equal(page.text('trk-check-addr-out'), before);
+});

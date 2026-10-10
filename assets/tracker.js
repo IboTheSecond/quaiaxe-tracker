@@ -6,7 +6,7 @@
  * "unavailable" state per source — nothing here is ever invented. Polls every 30s while the tab is
  * visible, and pauses while it is hidden.
  */
-import { formatHashrate, agoParts, isAddressShape, safeBlockHeight, safeCount } from '/assets/lib/tracker-lib.js';
+import { formatHashrate, agoParts, checksumAddress, safeBlockHeight, safeCount } from '/assets/lib/tracker-lib.js';
 
 const $ = (id) => document.getElementById(id);
 const i18nEl = $('trk-i18n');
@@ -260,8 +260,10 @@ if (i18nEl && configEl) {
   const checkInput = $('trk-check-addr'), checkGo = $('trk-check-go'), checkErr = $('trk-check-err');
   if (checkGo) {
     checkGo.addEventListener('click', () => {
-      const v = (checkInput.value || '').trim();
-      if (!isAddressShape(v)) { checkErr.textContent = I18N['tracker.check.err']; return; }
+      // quai_getBalance only accepts the checksummed spelling, so a pasted lowercase address is fixed here first;
+      // a mixed-case address with the wrong casing, or anything that is not 0x + 40 hex, is refused.
+      const v = checksumAddress(checkInput.value);
+      if (!v) { checkErr.textContent = I18N['tracker.check.err']; return; }
       checkErr.textContent = '';
       addresses = [v];
       setText('trk-check-addr-out', v);
