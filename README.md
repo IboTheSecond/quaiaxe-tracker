@@ -77,7 +77,7 @@ fonts/                  the self-hosted fonts and their licences
 - The burn tile counts mining burns only. It is the burn vault's own counter, not the token's total burn.
 - The numbers come from StratumX's undocumented pool API and from the Quai RPC. Worker names are third-party text and are shown as received, escaped.
 - The Quai RPC refuses `quai_getBalance` for an address that is not in its checksummed spelling, so for an address pasted in lowercase the "QUAI unlocked" tile can read "unavailable". Paste the address with its checksum casing.
-- This is not audited, it is not financial advice, and mining is a lottery.
+- This is not financial advice, and mining is a lottery.
 
 ## More
 

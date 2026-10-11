@@ -79,7 +79,6 @@ test('SECURITY.md: private reporting on GitHub plus the one contact address, nev
   assert.match(text, /Report a vulnerability/);
   assert.ok(text.includes(CONTACT));
   assert.ok(!text.includes(COMMIT_MAILBOX));
-  assert.match(text, /not audited|has not been audited/i);
 });
 test('CONTRIBUTING.md says what this repository is: a generated copy, issues yes, pull requests no', () => {
   const text = read('CONTRIBUTING.md');

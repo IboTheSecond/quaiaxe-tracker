@@ -1,6 +1,6 @@
 {
   "name": "quaiaxe-tracker",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A live, read-only mining tracker page for QuaiAxe addresses on Quai Network. Static files, no dependencies, no backend.",
   "private": true,
   "license": "MIT",

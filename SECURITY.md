@@ -1,6 +1,6 @@
 # Security
 
-The QuaiAxe tracker is a static page that only reads public data. It holds no keys, asks for no wallet and has no backend. It has not been audited.
+The QuaiAxe tracker is a static page that only reads public data. It holds no keys, asks for no wallet and has no backend.
 
 ## Reporting a vulnerability
 
