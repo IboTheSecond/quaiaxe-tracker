@@ -1,0 +1,17 @@
+{
+  "name": "quaiaxe-tracker",
+  "version": "1.0.4",
+  "description": "A live, read-only mining tracker page for QuaiAxe addresses on Quai Network. Static files, no dependencies, no backend.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs && node scripts/serve.mjs",
+    "test": "node scripts/run-tests.mjs",
+    "scan": "node scripts/scan-leaks.mjs . dist"
+  }
+}

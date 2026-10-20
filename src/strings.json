@@ -1,0 +1,258 @@
+{
+  "nav.lang.switch.aria": {
+    "en": "Language / Dil",
+    "tr": "Language / Dil"
+  },
+  "nav.chain.block": {
+    "en": "block",
+    "tr": "blok"
+  },
+  "nav.skip": {
+    "en": "Skip to content",
+    "tr": "İçeriğe geç"
+  },
+  "footer.disclaimer": {
+    "en": "QuaiAxe × Hartii: QuaiAxe is a mining project on Quai, in partnership with Hartii; it is not affiliated with, endorsed by, or operated by Quai Network or Dominant Strategies. Nothing here is financial advice or a claim about price. Mining is a lottery. QUAI sent to a burn address is spent and cannot be returned.",
+    "tr": "QuaiAxe × Hartii: QuaiAxe, Hartii ile ortaklık içinde Quai üzerinde bir madencilik projesidir; Quai Network veya Dominant Strategies ile bağlantılı değildir, onlar tarafından onaylanmamış veya işletilmemektedir. Buradaki hiçbir şey finansal tavsiye veya fiyat iddiası değildir. Madencilik bir şans oyunudur. Yakım adresine gönderilen QUAI harcanır ve geri alınamaz."
+  },
+  "home.band.burned.loading": {
+    "en": "reading the chain…",
+    "tr": "zincir okunuyor…"
+  },
+  "tracker.title": {
+    "en": "QuaiAxe — live mining tracker",
+    "tr": "QuaiAxe — canlı madencilik takipçisi"
+  },
+  "tracker.description": {
+    "en": "Live workers, hashrate, workshares and locked/unlocked QUAI for every QuaiAxe address, read straight from StratumX and the Quai chain.",
+    "tr": "Her QuaiAxe adresi için canlı worker’lar, hashrate, workshare’ler ve kilitli/açık QUAI — doğrudan StratumX ve Quai zincirinden okunur."
+  },
+  "tracker.eyebrow": {
+    "en": "Tracker",
+    "tr": "Takip"
+  },
+  "tracker.h1": {
+    "en": "Watch it burn, live.",
+    "tr": "Canlı izleyin, yanıyor."
+  },
+  "tracker.lede": {
+    "en": "Every number below is read live from StratumX’s public pool API or straight off the Quai chain in your browser. Nothing here is invented — a source that cannot be reached shows \"unavailable\", never a guess.",
+    "tr": "Aşağıdaki her rakam StratumX’in herkese açık havuz API’sinden veya doğrudan tarayıcınızda Quai zincirinden canlı okunur. Burada hiçbir şey uydurulmaz — ulaşılamayan bir kaynak tahmin yerine \"okunamıyor\" gösterir."
+  },
+  "tracker.updated": {
+    "en": "updates every 30s",
+    "tr": "30 saniyede bir güncellenir"
+  },
+  "tracker.paused": {
+    "en": "paused — tab hidden",
+    "tr": "duraklatıldı — sekme arka planda"
+  },
+  "tracker.unavailable": {
+    "en": "unavailable right now",
+    "tr": "şu anda okunamıyor"
+  },
+  "tracker.loading": {
+    "en": "reading…",
+    "tr": "okunuyor…"
+  },
+  "tracker.miners.h2": {
+    "en": "Live miners",
+    "tr": "Canlı madenciler"
+  },
+  "tracker.miners.online.label": {
+    "en": "workers online",
+    "tr": "çevrimiçi worker"
+  },
+  "tracker.miners.total.label": {
+    "en": "workers total",
+    "tr": "toplam worker"
+  },
+  "tracker.hashrate.sha.label": {
+    "en": "SHA-256",
+    "tr": "SHA-256"
+  },
+  "tracker.hashrate.scrypt.label": {
+    "en": "Scrypt",
+    "tr": "Scrypt"
+  },
+  "tracker.hashrate.kawpow.label": {
+    "en": "KawPoW",
+    "tr": "KawPoW"
+  },
+  "tracker.shares.valid.label": {
+    "en": "valid shares",
+    "tr": "geçerli share"
+  },
+  "tracker.shares.stale.label": {
+    "en": "stale",
+    "tr": "bayat"
+  },
+  "tracker.shares.invalid.label": {
+    "en": "invalid",
+    "tr": "geçersiz"
+  },
+  "tracker.table.worker": {
+    "en": "Worker",
+    "tr": "Worker"
+  },
+  "tracker.table.algorithm": {
+    "en": "Algorithm",
+    "tr": "Algoritma"
+  },
+  "tracker.table.hashrate": {
+    "en": "Hashrate",
+    "tr": "Hashrate"
+  },
+  "tracker.table.shares": {
+    "en": "Shares (v/s/i)",
+    "tr": "Share (g/b/g)"
+  },
+  "tracker.table.lastshare": {
+    "en": "Last share",
+    "tr": "Son share"
+  },
+  "tracker.table.status": {
+    "en": "Status",
+    "tr": "Durum"
+  },
+  "tracker.table.empty": {
+    "en": "No workers seen for this address yet.",
+    "tr": "Bu adres için henüz worker görülmedi."
+  },
+  "tracker.status.online": {
+    "en": "online",
+    "tr": "çevrimiçi"
+  },
+  "tracker.status.offline": {
+    "en": "offline",
+    "tr": "çevrimdışı"
+  },
+  "tracker.workshares.h2": {
+    "en": "Workshares found",
+    "tr": "Bulunan workshare’ler"
+  },
+  "tracker.workshares.p": {
+    "en": "What StratumX reports here are Quai workshares for this address — each one earns a real QUAI reward under Quai’s multi-miner block design, whether or not it is also a full block.",
+    "tr": "StratumX’in burada raporladığı şey bu adres için Quai workshare’leridir — her biri, tam blok olsun olmasın, Quai’nin çoklu-madenci blok tasarımı altında gerçek bir QUAI ödülü kazanır."
+  },
+  "tracker.workshares.count24h": {
+    "en": "24h workshares",
+    "tr": "24s workshare"
+  },
+  "tracker.workshares.luck.avg": {
+    "en": "workshares, 7 days",
+    "tr": "workshare, 7 gün"
+  },
+  "tracker.workshares.luck.best": {
+    "en": "best share (24h)",
+    "tr": "en iyi share (24s)"
+  },
+  "tracker.workshares.table.height": {
+    "en": "Height",
+    "tr": "Yükseklik"
+  },
+  "tracker.workshares.table.time": {
+    "en": "Time",
+    "tr": "Zaman"
+  },
+  "tracker.workshares.table.worker": {
+    "en": "Worker",
+    "tr": "Worker"
+  },
+  "tracker.workshares.table.algorithm": {
+    "en": "Algorithm",
+    "tr": "Algoritma"
+  },
+  "tracker.workshares.table.empty": {
+    "en": "No workshares in the last 7 days.",
+    "tr": "Son 7 günde workshare yok."
+  },
+  "tracker.workshares.viewblock": {
+    "en": "view block ↗",
+    "tr": "bloğu gör ↗"
+  },
+  "tracker.chart.h2": {
+    "en": "Hashrate, 24h",
+    "tr": "Hashrate, 24s"
+  },
+  "tracker.chart.aria": {
+    "en": "Line chart of combined hashrate over the last 24 hours.",
+    "tr": "Son 24 saatteki toplam hashrate’in çizgi grafiği."
+  },
+  "tracker.chart.empty": {
+    "en": "No hashrate history yet.",
+    "tr": "Henüz hashrate geçmişi yok."
+  },
+  "tracker.rewards.h2": {
+    "en": "Rewards & burn",
+    "tr": "Ödüller ve yakım"
+  },
+  "tracker.rewards.locked.label": {
+    "en": "QUAI locked (unlocking)",
+    "tr": "Kilitli QUAI (açılıyor)"
+  },
+  "tracker.rewards.locked.sub": {
+    "en": "mining rewards not yet unlocked, this address",
+    "tr": "bu adres için henüz açılmamış madencilik ödülleri"
+  },
+  "tracker.rewards.unlocked.label": {
+    "en": "QUAI unlocked",
+    "tr": "Açık QUAI"
+  },
+  "tracker.rewards.unlocked.sub": {
+    "en": "available balance, this address",
+    "tr": "bu adresin kullanılabilir bakiyesi"
+  },
+  "tracker.rewards.nextunlock.label": {
+    "en": "next unlock, estimate",
+    "tr": "sonraki açılma, tahmini"
+  },
+  "tracker.rewards.nextunlock.basis": {
+    "en": "estimate: first share in the last 7d + ~14 days",
+    "tr": "tahmin: son 7 gündeki ilk share + ~14 gün"
+  },
+  "tracker.rewards.nextunlock.none": {
+    "en": "no recent share to estimate from",
+    "tr": "tahmin için son share yok"
+  },
+  "tracker.rewards.burned.label": {
+    "en": "$QAXE burned by mining, all time",
+    "tr": "Madencilikle yakılan $QAXE, toplam"
+  },
+  "tracker.rewards.burned.link": {
+    "en": "view the burn vault on Quaiscan ↗",
+    "tr": "yakım kasasını Quaiscan’de gör ↗"
+  },
+  "tracker.check.h2": {
+    "en": "Check your own address",
+    "tr": "Kendi adresinizi kontrol edin"
+  },
+  "tracker.check.p": {
+    "en": "Paste any Cyprus-1 deposit address — including your own split-mode address — to see its own live stats above.",
+    "tr": "Herhangi bir Cyprus-1 yatırma adresini — kendi bölünmüş modlu adresiniz dahil — yapıştırın, yukarıda kendi canlı istatistiklerini görün."
+  },
+  "tracker.check.label": {
+    "en": "Deposit address",
+    "tr": "Yatırma adresi"
+  },
+  "tracker.check.placeholder": {
+    "en": "0x00…",
+    "tr": "0x00…"
+  },
+  "tracker.check.go": {
+    "en": "Track this address",
+    "tr": "Bu adresi takip et"
+  },
+  "tracker.check.err": {
+    "en": "That is not a Cyprus-1 address — it should start 0x00 and be 42 characters.",
+    "tr": "Bu bir Cyprus-1 adresi değil — 0x00 ile başlamalı ve 42 karakter olmalı."
+  },
+  "tracker.check.showing": {
+    "en": "Showing:",
+    "tr": "Gösterilen:"
+  },
+  "tracker.check.default": {
+    "en": "default tracked address",
+    "tr": "varsayılan takip edilen adres"
+  }
+}
