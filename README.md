@@ -1,5 +1,7 @@
 # QuaiAxe tracker
 
+Source release: 1.0.4.
+
 A live, read-only page for people who mine to a QuaiAxe deposit address on Quai Network (Cyprus-1). For an address it shows the workers the pool sees, their hashrate and shares, the workshares found, the QUAI still locked and the QUAI already unlocked, an estimate of the next unlock, and how much QAXE the burn vault has destroyed through mining.
 
 It is static HTML, CSS and JavaScript. There is no backend, no cookie, no analytics, no npm dependency, and no wallet or key anywhere. It only reads.
@@ -32,7 +34,7 @@ One refresh is 5 requests to the pool and, for the RPC, two reads per tracked ad
 
 The hosts and the node are not fixed: they come from the config (see below), and the Content-Security-Policy is built from the same config, so the page can contact exactly those two hosts and no other.
 
-StratumX's API has no public documentation. The page was written against what the service returns. If StratumX changes the format, the affected tiles show "unavailable" instead of a wrong number, and no test here will notice, because the tests use made-up responses.
+StratumX's API has no public documentation. The page was written against what the service returns. A missing or malformed miner batch clears every miner-derived figure; history over 1,500 points or with invalid timestamps or hashrates makes the chart unavailable. Older responses cannot repaint a newer address or poll. The tests use synthetic responses, so they do not prove current upstream behavior.
 
 ## Run it
 
@@ -76,7 +78,7 @@ fonts/                  the self-hosted fonts and their licences
 - A source that cannot be reached shows "unavailable". The page never fills in a number it did not read.
 - The burn tile counts mining burns only. It is the burn vault's own counter, not the token's total burn.
 - The numbers come from StratumX's undocumented pool API and from the Quai RPC. Worker names are third-party text and are shown as received, escaped.
-- The Quai RPC refuses `quai_getBalance` for an address that is not in its checksummed spelling, so for an address pasted in lowercase the "QUAI unlocked" tile can read "unavailable". Paste the address with its checksum casing.
+- A pasted lowercase or uppercase Quai address is checksummed before RPC reads; a mixed-case address with an invalid checksum is refused.
 - This is not financial advice, and mining is a lottery.
 
 ## More

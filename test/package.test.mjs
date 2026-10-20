@@ -12,6 +12,10 @@ const pkg = JSON.parse(read('package.json'));
 const COMMIT_MAILBOX = ['dev', 'hartiilabs.com'].join('@'); // the git identity's mailbox; it receives no mail and is never a contact
 const CONTACT = ['dev', 'hartiibiome.com'].join('@');
 
+test('README source release matches package.json', () => {
+  assert.ok(read('README.md').includes(`Source release: ${pkg.version}.`));
+});
+
 // ---------------------------------------------------------------------------------------------------------------
 // no dependencies
 // ---------------------------------------------------------------------------------------------------------------

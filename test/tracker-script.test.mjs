@@ -23,6 +23,18 @@ test('a normal pool response fills the tiles and the worker table', async () => 
   assert.match(rows, /<td>13485\/0\/0<\/td>/);
 });
 
+test('a failed or malformed miner batch clears every miner-derived value', async () => {
+  const page = await startTracker();
+  const ids = ['trk-online', 'trk-total', 'trk-hr-sha', 'trk-hr-scrypt', 'trk-hr-kawpow', 'trk-sh-valid', 'trk-sh-stale', 'trk-sh-invalid'];
+  assert.equal(page.text('trk-hr-sha'), '9.29 TH/s', 'precondition: the old value is visible');
+  for (const failed of [null, { stats: null }]) {
+    page.world.miners = failed;
+    await page.tick();
+    for (const id of ids) assert.equal(page.text(id), page.i18n['tracker.unavailable'], id);
+    assert.match(page.el('trk-workers-body').innerHTML, /unavailable right now/);
+  }
+});
+
 test('share counters from the pool API are numbers before they reach innerHTML, whatever the API sends', async () => {
   const hostile = ['<img src=x onerror=alert(1)>', ['<img src=x onerror=alert(1)>'], '"><script>alert(1)</script>', '1<b>2', -7, '9007199254740993abc'];
   const base = defaultWorld();
@@ -92,6 +104,53 @@ test('next unlock does not survive a failed workshare fetch either', async () =>
   assert.equal(page.text('trk-nextunlock'), page.i18n['tracker.rewards.nextunlock.none']);
 });
 
+test('an old address response cannot repaint any panel after a new address finishes', async () => {
+  let releaseMiners, releaseShares, releaseHistory;
+  const oldMiners = new Promise((resolve) => { releaseMiners = resolve; });
+  const oldShares = new Promise((resolve) => { releaseShares = resolve; });
+  const oldHistory = new Promise((resolve) => { releaseHistory = resolve; });
+  const normal = defaultWorld();
+  const world = defaultWorld({
+    miners: (addrs) => addrs[0] === DEFAULT_ADDR ? oldMiners : { stats: { ...normal.miners().stats, workersConnected: 0, workersTotal: 0 }, workers: [] },
+    blocks7d: (addrs) => addrs[0] === DEFAULT_ADDR ? oldShares : [],
+    history: (addrs) => addrs[0] === DEFAULT_ADDR ? oldHistory : { points: [
+      { timestamp: new Date(T0 - DAY).toISOString(), hashrate: 1 },
+      { timestamp: new Date(T0).toISOString(), hashrate: 2 },
+    ] },
+  });
+  const page = await startTracker({ world });
+  await page.check(OTHER_ADDR);
+  const expected = {
+    address: page.text('trk-check-addr-out'), online: page.text('trk-online'),
+    unlock: page.text('trk-nextunlock'), rows: page.el('trk-ws-body').innerHTML,
+    chart: page.el('trk-chart').innerHTML,
+  };
+  assert.equal(expected.online, '0');
+  assert.equal(expected.unlock, page.i18n['tracker.rewards.nextunlock.none']);
+  releaseMiners(normal.miners()); releaseShares(normal.blocks7d()); releaseHistory(normal.history());
+  await page.settle();
+  assert.deepEqual({
+    address: page.text('trk-check-addr-out'), online: page.text('trk-online'),
+    unlock: page.text('trk-nextunlock'), rows: page.el('trk-ws-body').innerHTML,
+    chart: page.el('trk-chart').innerHTML,
+  }, expected);
+});
+
+test('an older poll for the same address cannot repaint the newer poll', async () => {
+  let release;
+  const old = new Promise((resolve) => { release = resolve; });
+  const normal = defaultWorld();
+  let calls = 0;
+  const page = await startTracker({ world: defaultWorld({
+    miners: () => ++calls === 1 ? old : { stats: { ...normal.miners().stats, workersConnected: 0 }, workers: [] },
+  }) });
+  await page.tick();
+  assert.equal(page.text('trk-online'), '0');
+  release(normal.miners());
+  await page.settle();
+  assert.equal(page.text('trk-online'), '0');
+});
+
 test('the hashrate chart draws its axis labels without any inline style attribute', async () => {
   const page = await startTracker();
   const wrap = page.el('trk-chart');
@@ -111,6 +170,36 @@ test('the hashrate chart draws its axis labels without any inline style attribut
   assert.deepEqual([x0, x1, x2].map((n) => n.style.transform), ['translateX(0)', 'translateX(-50%)', 'translateX(-100%)']);
   for (const n of [y0, y1, y2]) assert.match(n.className, /\blab\b.*\blab-y\b/);
   for (const n of [x0, x1, x2]) assert.match(n.className, /\blab\b.*\blab-x\b/);
+});
+
+test('oversized or malformed pool history is visibly unavailable instead of rendering an unsafe chart', async () => {
+  const page = await startTracker();
+  assert.match(page.el('trk-chart').innerHTML, /<svg/);
+  const normal = defaultWorld();
+  for (const points of [
+    Array.from({ length: 2000 }, (_, i) => ({ timestamp: new Date(T0 - DAY + i * 1000).toISOString(), hashrate: i })),
+    [{ timestamp: new Date(T0).toISOString(), hashrate: 'not-a-number' }],
+  ]) {
+    page.world.history = () => ({ points });
+    await page.tick();
+    assert.equal(page.text('trk-chart-status'), page.i18n['tracker.unavailable']);
+    assert.equal(page.el('trk-chart').innerHTML, '');
+  }
+  page.world.history = normal.history;
+  await page.tick();
+  assert.match(page.el('trk-chart').innerHTML, /<svg/, 'a later good poll recovers');
+});
+
+test('nonfinite, negative or malformed luck never renders a numerical percentage', async () => {
+  const page = await startTracker();
+  for (const value of ['bad', Infinity, -1, '']) {
+    page.world.shares = () => ({ bestShareLuck: value });
+    await page.tick();
+    assert.equal(page.text('trk-luck-best'), page.i18n['tracker.unavailable'], String(value));
+  }
+  page.world.shares = () => ({ bestShareLuck: 824.1 });
+  await page.tick();
+  assert.equal(page.text('trk-luck-best'), '824.1%');
 });
 
 // The CSP for /tracker/ is style-src 'self': an inline style attribute (or a <style> block, or

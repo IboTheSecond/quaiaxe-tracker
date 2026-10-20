@@ -27,7 +27,9 @@ if (!files.length) {
   process.exit(1);
 }
 
-const child = spawn(process.execPath, ['--test', ...files], { cwd: ROOT, stdio: 'inherit' });
+// build.test replaces dist/ atomically. On Windows, another test file reading dist/ at the
+// same time keeps directory handles open and makes that rename fail with EPERM.
+const child = spawn(process.execPath, ['--test', '--test-concurrency=1', ...files], { cwd: ROOT, stdio: 'inherit' });
 child.on('error', (err) => {
   console.error('run-tests: failed to launch node --test:', err);
   process.exit(1);

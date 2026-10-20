@@ -19,6 +19,7 @@ if (i18nEl && configEl) {
   const nf = (n, d) => Number(n).toLocaleString(loc, { minimumFractionDigits: d, maximumFractionDigits: d });
   const API = CONFIG.stratumxApi || 'https://backend.stratumx.org/api';
   const RPC = CONFIG.rpc || 'https://rpc.quai.network/cyprus1';
+  const MAX_HISTORY_POINTS = 1500;
 
   let addresses = (CONFIG.trackedAddresses || []).slice();
 
@@ -50,14 +51,24 @@ if (i18nEl && configEl) {
   }
 
   // ---------- section 01: live miners ----------
-  async function refreshMiners() {
+  function minerBatchValid(batch) {
+    const s = batch && batch.stats;
+    const count = (n) => Number.isSafeInteger(n) && n >= 0;
+    const rate = (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+    return s && typeof s === 'object' && !Array.isArray(s) && Array.isArray(batch.workers)
+      && ['workersConnected', 'workersTotal', 'sharesValid', 'sharesStale', 'sharesInvalid'].every((key) => count(s[key]))
+      && ['hashrateSha', 'hashrateScrypt', 'hashrateKawpow'].every((key) => rate(s[key]));
+  }
+  async function refreshMiners(snapshot) {
     const j = await getJSON(`${API}/miners/batch`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ addresses }),
+      body: JSON.stringify({ addresses: snapshot.addresses }),
     });
-    if (!j || !j.stats) {
-      setText('trk-online', I18N['tracker.unavailable']);
-      setText('trk-total', I18N['tracker.unavailable']);
+    if (!snapshot.current()) return;
+    if (!minerBatchValid(j)) {
+      for (const id of ['trk-online', 'trk-total', 'trk-hr-sha', 'trk-hr-scrypt', 'trk-hr-kawpow', 'trk-sh-valid', 'trk-sh-stale', 'trk-sh-invalid']) {
+        setText(id, I18N['tracker.unavailable']);
+      }
       const body = $('trk-workers-body');
       if (body) body.innerHTML = `<tr><td colspan="6">${I18N['tracker.unavailable']}</td></tr>`;
       return;
@@ -99,29 +110,27 @@ if (i18nEl && configEl) {
   }
 
   // ---------- section 02: workshares ----------
-  let earliestShareMs = null;
-  async function refreshWorkshares() {
-    const addrParam = addresses.join(',');
+  async function refreshWorkshares(snapshot) {
+    const addrParam = snapshot.addresses.join(',');
     const [blocks24h, blocks7d, shares] = await Promise.all([
       getJSON(`${API}/pool/blocks?addresses=${encodeURIComponent(addrParam)}&period=24h`),
       getJSON(`${API}/pool/blocks?addresses=${encodeURIComponent(addrParam)}&period=7d`),
       getJSON(`${API}/pool/shares?addresses=${encodeURIComponent(addrParam)}&period=24h`),
     ]);
+    if (!snapshot.current()) return null;
 
     setText('trk-ws-24h', Array.isArray(blocks24h) ? String(blocks24h.length) : I18N['tracker.unavailable']);
 
     // 7-day workshare count. (StratumX's averageLuck averages every tiny share, not workshares, so it
     // read as a misleading "0.9%" — replaced 2026-09-27.)
     setText('trk-luck-avg', Array.isArray(blocks7d) ? String(blocks7d.length) : I18N['tracker.unavailable']);
-    if (shares) {
-      setText('trk-luck-best', shares.bestShareLuck != null ? `${nf(shares.bestShareLuck, 1)}%` : '—');
-    } else {
-      setText('trk-luck-best', I18N['tracker.unavailable']);
-    }
+    const rawLuck = shares?.bestShareLuck;
+    const luck = typeof rawLuck === 'number' || (typeof rawLuck === 'string' && /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(rawLuck)) ? Number(rawLuck) : NaN;
+    setText('trk-luck-best', Number.isFinite(luck) && luck >= 0 ? `${nf(luck, 1)}%` : I18N['tracker.unavailable']);
 
     // Start from "no estimate" on every pass. A failed fetch or an empty list must not leave the previous
     // address's (or the previous cycle's) earliest workshare behind to drive the "next unlock" tile.
-    earliestShareMs = null;
+    let earliestShareMs = null;
     const body = $('trk-ws-body');
     if (body) {
       if (!Array.isArray(blocks7d)) {
@@ -146,18 +155,29 @@ if (i18nEl && configEl) {
     }
     // paintRewards() is not called here: refreshAll() runs it once, after this resolves and
     // earliestShareMs is set. A second call would read every balance and the burn vault twice per cycle.
+    return earliestShareMs;
   }
 
   // ---------- section 03: 24h hashrate chart ----------
-  async function refreshChart() {
-    const j = await getJSON(`${API}/miner/hashrate/history?addresses=${encodeURIComponent(addresses.join(','))}&period=24h`);
+  async function refreshChart(snapshot) {
+    const j = await getJSON(`${API}/miner/hashrate/history?addresses=${encodeURIComponent(snapshot.addresses.join(','))}&period=24h`);
+    if (!snapshot.current()) return;
     const wrap = $('trk-chart');
     const status = $('trk-chart-status');
     if (!wrap) return;
     const points = j && Array.isArray(j.points) ? j.points : null;
     if (!points || !points.length) {
       if (status) status.textContent = I18N['tracker.chart.empty'];
-      wrap.querySelectorAll('svg').forEach((n) => n.remove());
+      wrap.innerHTML = '';
+      return;
+    }
+    if (points.length > MAX_HISTORY_POINTS || points.some((p) => {
+      const rate = p && (typeof p.hashrate === 'number' || (typeof p.hashrate === 'string' && p.hashrate.trim())) ? Number(p.hashrate) : NaN;
+      return !p || typeof p.timestamp !== 'string' || !Number.isFinite(Date.parse(p.timestamp)) || !Number.isFinite(rate) || rate < 0;
+    })) {
+      if (status) status.textContent = I18N['tracker.unavailable'];
+      wrap.innerHTML = '';
+      setText('trk-chart-readout', '');
       return;
     }
     if (status) status.textContent = '';
@@ -167,7 +187,7 @@ if (i18nEl && configEl) {
   function drawChart(wrap, points) {
     const W = 960, H = 220, PAD = 28;
     const values = points.map((p) => Number(p.hashrate) || 0);
-    const max = Math.max(1, ...values);
+    const max = values.reduce((current, value) => Math.max(current, value), 1);
     const min = 0;
     const x = (i) => PAD + (i / Math.max(1, points.length - 1)) * (W - PAD * 2);
     const y = (v) => H - PAD - ((v - min) / (max - min || 1)) * (H - PAD * 2);
@@ -221,13 +241,13 @@ if (i18nEl && configEl) {
   }
 
   // ---------- section 04: rewards & burn ----------
-  async function paintRewards() {
-    if (!addresses.length) return;
-    const primary = addresses[0];
+  async function paintRewards(snapshot, earliestShareMs) {
+    if (!snapshot.addresses.length || !snapshot.current()) return;
     const [lockedResults, unlockedResults] = await Promise.all([
-      Promise.all(addresses.map((a) => rpcCall('quai_getLockedBalance', [a]))),
-      Promise.all(addresses.map((a) => rpcCall('quai_getBalance', [a, 'latest']))),
+      Promise.all(snapshot.addresses.map((a) => rpcCall('quai_getLockedBalance', [a]))),
+      Promise.all(snapshot.addresses.map((a) => rpcCall('quai_getBalance', [a, 'latest']))),
     ]);
+    if (!snapshot.current()) return;
     const sumHex = (arr) => {
       const nonNull = arr.filter((v) => v != null);
       if (!nonNull.length) return null;
@@ -249,6 +269,7 @@ if (i18nEl && configEl) {
 
     // Burned by mining: the burn vault's own counter, read on-chain (totalTokensBurned()). Not the token's total burn.
     const burnedHex = CONFIG.vault ? await rpcCall('eth_call', [{ to: CONFIG.vault, data: '0xd157e301' }, 'latest']) : null;
+    if (!snapshot.current()) return;
     if (burnedHex) {
       setText('trk-burned', nf(Number(BigInt(burnedHex)) / 1e18, 0));
     } else {
@@ -273,10 +294,26 @@ if (i18nEl && configEl) {
   setText('trk-check-addr-out', addresses[0] || '—');
 
   // ---------- polling: every 30s while visible, paused while hidden ----------
+  let refreshGeneration = 0;
   function refreshAll() {
-    refreshMiners();
-    refreshWorkshares().then(paintRewards);
-    refreshChart();
+    const generation = ++refreshGeneration;
+    const snapshot = { addresses: [...addresses], current: () => generation === refreshGeneration };
+    refreshMiners(snapshot).catch(() => {
+      if (!snapshot.current()) return;
+      for (const id of ['trk-online', 'trk-total', 'trk-hr-sha', 'trk-hr-scrypt', 'trk-hr-kawpow', 'trk-sh-valid', 'trk-sh-stale', 'trk-sh-invalid']) setText(id, I18N['tracker.unavailable']);
+    });
+    refreshWorkshares(snapshot).then((earliest) => paintRewards(snapshot, earliest)).catch(() => {
+      if (!snapshot.current()) return;
+      for (const id of ['trk-ws-24h', 'trk-luck-avg', 'trk-luck-best', 'trk-locked', 'trk-unlocked', 'trk-burned']) setText(id, I18N['tracker.unavailable']);
+      setText('trk-nextunlock', I18N['tracker.rewards.nextunlock.none']);
+    });
+    refreshChart(snapshot).catch(() => {
+      if (!snapshot.current()) return;
+      setText('trk-chart-status', I18N['tracker.unavailable']);
+      const chart = $('trk-chart');
+      if (chart) chart.innerHTML = '';
+      setText('trk-chart-readout', '');
+    });
   }
   let timer = null;
   function startPolling() {
