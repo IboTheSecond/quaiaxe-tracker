@@ -1,0 +1,6 @@
+# The public QAXE token contract address in config.example.json (key "qaxeToken") matches the
+# generic-api-key rule. It is a public contract address, not a secret. Only this exact finding is ignored.
+f16a1d14584cef3d08bb422662d5adbe0f9573be:config.example.json:generic-api-key:8
+# The generated v1.0.4 tag is a deliberate one-commit public export, so the same public
+# contract address is introduced again at that root. The protected tag cannot be moved.
+dbb89ee36d6fa62ad7f818c02a5232626f66ef9a:config.example.json:generic-api-key:8
