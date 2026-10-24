@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { formatHashrate } from '../src/lib/tracker-lib.js';
-import { startTracker, defaultWorld, CONFIG, TRACKER_JS, T0, DAY, DEFAULT_ADDR, OTHER_ADDR } from './helpers/tracker-harness.mjs';
+import { startTracker, defaultWorld, CONFIG, TRACKER_JS, T0, DAY, HOUR, DEFAULT_ADDR, OTHER_ADDR } from './helpers/tracker-harness.mjs';
 
 const shortDate = (ms) => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const clock = (iso) => new Date(iso).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -249,4 +249,210 @@ test('a mixed-case address with the wrong casing is refused, with no request sen
   assert.equal(page.text('trk-check-err'), page.i18n['tracker.check.err']);
   assert.equal(page.calls.length, 0, 'nothing is sent for a refused address');
   assert.equal(page.text('trk-check-addr-out'), before);
+});
+
+// ---- tracker v2: range tabs, luck chart, top rigs, unlock schedule, proof strip, furnace strip, fast poll ----
+const pressed = (page, id) => ['1h', '24h', '7d'].filter((r) => page.el(`${id}-${r}`) && page.el(`${id}-${r}`).attrs['aria-pressed'] === 'true');
+const periods = (page, route) => page.stratumCalls().filter((c) => c.path.endsWith(route)).map((c) => new URL(c.url).searchParams.get('period'));
+const minutes = (n) => n * 60_000;
+
+test('the hashrate chart opens on 24h; the 1h and 7d tabs fetch exactly that period and redraw; 30d is never requested', async () => {
+  const page = await startTracker();
+  assert.deepEqual(periods(page, '/miner/hashrate/history'), ['24h']);
+  assert.deepEqual(pressed(page, 'trk-hr-tabs'), ['24h']);
+  page.clearCalls();
+  await page.click('trk-hr-tabs-1h');
+  assert.deepEqual(periods(page, '/miner/hashrate/history'), ['1h']);
+  assert.deepEqual(pressed(page, 'trk-hr-tabs'), ['1h']);
+  const hour = defaultWorld().history(null, '1h').points;
+  assert.equal(page.el('trk-chart').children[3].textContent, new Date(hour[0].timestamp).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit' }), 'the first time label is the 1h window start');
+  page.clearCalls();
+  await page.click('trk-hr-tabs-7d');
+  assert.deepEqual(periods(page, '/miner/hashrate/history'), ['7d']);
+  const week = defaultWorld().history(null, '7d').points;
+  assert.equal(page.el('trk-chart').children[3].textContent, new Date(week[0].timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric' }), 'a 7 day axis is labelled with dates');
+  await page.tick();
+  assert.deepEqual(periods(page, '/miner/hashrate/history'), ['7d', '7d'], 'the 30 s poll refreshes the chosen range');
+  assert.ok(!page.calls.some((c) => /period=30d/.test(c.url)), 'the API rejects 30d, so it is never asked for');
+});
+
+test('an older range response cannot repaint a newer choice', async () => {
+  let release;
+  const slow = new Promise((resolve) => { release = resolve; });
+  const world = defaultWorld({ history: (addrs, period) => (period === '1h' ? slow : defaultWorld().history(addrs, period)) });
+  const page = await startTracker({ world });
+  const click = page.click('trk-hr-tabs-1h');
+  await page.settle();
+  await page.click('trk-hr-tabs-7d');
+  const seven = page.el('trk-chart').innerHTML;
+  assert.match(seven, /<svg/);
+  release({ points: [{ timestamp: new Date(T0 - HOUR).toISOString(), hashrate: 1 }, { timestamp: new Date(T0).toISOString(), hashrate: 2 }] });
+  await click;
+  await page.settle();
+  assert.equal(page.el('trk-chart').innerHTML, seven, 'the late 1h answer is dropped');
+  assert.deepEqual(pressed(page, 'trk-hr-tabs'), ['7d']);
+});
+
+test('a malformed range answer is unavailable on the chart and the next good answer recovers it', async () => {
+  const page = await startTracker();
+  page.world.history = () => ({ points: [{ timestamp: 'nope', hashrate: 1 }] });
+  await page.click('trk-hr-tabs-1h');
+  assert.equal(page.text('trk-chart-status'), page.i18n['tracker.unavailable']);
+  assert.equal(page.el('trk-chart').innerHTML, '');
+  page.world.history = defaultWorld().history;
+  await page.click('trk-hr-tabs-24h');
+  assert.match(page.el('trk-chart').innerHTML, /<svg/);
+});
+
+test('the workshare luck chart draws one mark per workshare, the luckiest one hot, with a readout and 24h/7d tabs', async () => {
+  const page = await startTracker();
+  assert.deepEqual(periods(page, '/pool/shares'), ['24h']);
+  const marks = (html) => [...html.matchAll(/<rect class="trk-pt( hot)?"/g)];
+  assert.equal(marks(page.el('trk-luck-chart').innerHTML).length, 2);
+  assert.equal(marks(page.el('trk-luck-chart').innerHTML).filter((m) => m[1]).length, 1);
+  page.clearCalls();
+  await page.click('trk-ws-tabs-7d');
+  assert.deepEqual(periods(page, '/pool/shares'), ['7d', '24h'], 'the 7d tab asks for its list, and the best-share tile stays a 24h figure');
+  assert.equal(marks(page.el('trk-luck-chart').innerHTML).length, 3);
+  assert.equal(page.text('trk-luck-best'), '824.1%');
+  const svg = page.el('trk-luck-chart').svg;
+  svg.listeners.pointermove[0]({ clientX: 480 });
+  assert.match(page.text('trk-luck-readout'), /3,000\.0% luck/);
+  assert.ok(!/NaN|undefined|Infinity/.test(page.el('trk-luck-chart').innerHTML + page.text('trk-luck-readout')));
+});
+
+test('a malformed or oversized workshare list is unavailable on the luck chart, never NaN', async () => {
+  const page = await startTracker();
+  const share = (i, luck) => ({ timestamp: new Date(T0 - i * 1000).toISOString(), luckPercent: luck, algorithm: 'sha256', worker: 'w' });
+  for (const shares of [[share(1, 'bad')], [share(1, -4)], Array.from({ length: 1501 }, (_, i) => share(i, 1))]) {
+    page.world.shares = () => ({ bestShareLuck: 5, shares });
+    await page.tick();
+    assert.equal(page.text('trk-luck-status'), page.i18n['tracker.unavailable']);
+    assert.equal(page.el('trk-luck-chart').innerHTML, '');
+  }
+  page.world.shares = () => ({ bestShareLuck: 5, shares: [] });
+  await page.tick();
+  assert.equal(page.text('trk-luck-status'), page.i18n['tracker.luck.empty']);
+});
+
+test('top rigs: the busiest workers by hashrate with their share, names escaped, an address link only when well formed', async () => {
+  const page = await startTracker();
+  const body = page.el('trk-top-body').innerHTML;
+  assert.equal((body.match(/<tr>/g) || []).length, 1, 'the idle rig is not ranked');
+  assert.match(body, /<td>1<\/td><td>rig-a<\/td>/);
+  assert.ok(body.includes(`href="https://quaiscan.io/address/${DEFAULT_ADDR}"`));
+  assert.match(body, /<td>100\.0%<\/td>/);
+  const base = defaultWorld();
+  page.world.miners = () => {
+    const j = base.miners();
+    j.workers = [
+      { ...j.workers[0], workerName: '<img src=x onerror=alert(1)>', hashrate: 3e12, address: '"><script>alert(2)</script>' },
+      { ...j.workers[0], workerName: `${DEFAULT_ADDR}.big`, hashrate: 9e12 },
+      { ...j.workers[0], workerName: 'zero', hashrate: 0 },
+      null,
+    ];
+    return j;
+  };
+  await page.tick();
+  const hostile = page.el('trk-top-body').innerHTML;
+  assert.doesNotMatch(hostile, /<img|<script|alert\(2\)/i);
+  assert.match(hostile, /<td>1<\/td><td>big<\/td>/);
+  assert.match(hostile, /<td>2<\/td><td>&lt;img src=x onerror=alert\(1\)&gt;<\/td><td>—<\/td>/, 'a malformed address becomes a dash');
+  assert.match(hostile, /<td>75\.0%<\/td>/);
+  assert.match(hostile, /<td>25\.0%<\/td>/);
+  page.world.miners = () => ({ stats: base.miners().stats, workers: [] });
+  await page.tick();
+  assert.match(page.el('trk-top-body').innerHTML, /No rigs with hashrate right now\./);
+});
+
+test('top rigs are cleared together with the other miner values when the batch is unavailable', async () => {
+  const page = await startTracker();
+  page.world.miners = null;
+  await page.tick();
+  assert.match(page.el('trk-top-body').innerHTML, /unavailable right now/);
+});
+
+test('unlock schedule: workshares per UTC day with the day each batch should unlock, found + 14 days', async () => {
+  const page = await startTracker();
+  const body = page.el('trk-schedule-body').innerHTML;
+  assert.equal(body, '<tr><td>2026-09-30</td><td>1</td><td>2026-10-14</td></tr><tr><td>2026-10-03</td><td>1</td><td>2026-10-17</td></tr><tr><td>2026-10-05</td><td>1</td><td>2026-10-19</td></tr>');
+  page.world.blocks7d = () => [];
+  await page.tick();
+  assert.match(page.el('trk-schedule-body').innerHTML, /nothing to schedule/);
+  page.world.blocks7d = null;
+  await page.tick();
+  assert.match(page.el('trk-schedule-body').innerHTML, /unavailable right now/);
+});
+
+test('the proof strip repeats the live figures: hashrate across algorithms, 24h workshares, and the mining burn counter', async () => {
+  const page = await startTracker();
+  assert.equal(page.text('trk-p-hr'), '9.29 TH/s');
+  assert.equal(page.text('trk-p-ws'), page.text('trk-ws-24h'));
+  assert.equal(page.text('trk-p-burn'), page.text('trk-burned'));
+  assert.equal(page.text('trk-p-burn'), '33,442');
+  page.world.miners = null;
+  await page.tick();
+  assert.equal(page.text('trk-p-hr'), page.i18n['tracker.unavailable']);
+});
+
+test('the furnace strip shows the last 48 workshares, newest on the right, hotter when fresher, and only a new one animates', async () => {
+  const page = await startTracker({ now: T0 });
+  const cells = (html) => [...html.matchAll(/<i( class="([^"]*)")?><\/i>/g)].map((m) => m[2] || '');
+  const first = cells(page.el('trk-strip').innerHTML);
+  assert.equal(first.length, 48);
+  assert.deepEqual(first.slice(0, 46), new Array(46).fill(''));
+  assert.deepEqual(first.slice(46), ['share', 'share'], 'workshares hours old are the coolest colour');
+  const fresh = (age, key) => ({ height: 10_600_000 + key, hash: '0x' + String(key).padStart(64, '0'), worker: `${DEFAULT_ADDR}.rig-a`, algorithm: 'sha256', difficulty: '1', foundAt: new Date(T0 - age).toISOString() });
+  page.world.blocks1h = () => [fresh(minutes(10), 1), fresh(minutes(3), 2), fresh(20_000, 3)];
+  await page.fastTick();
+  const second = cells(page.el('trk-strip').innerHTML);
+  assert.deepEqual(second.slice(43), ['share', 'share', 'h2 trk-tick', 'h1 trk-tick', 'fresh trk-tick']);
+  await page.fastTick();
+  assert.ok(!cells(page.el('trk-strip').innerHTML).some((c) => /trk-tick/.test(c)), 'nothing animates again when nothing is new');
+});
+
+test('the fast poll asks for the last hour only, turns each new workshare into a feed line, a table row and a count, and ignores ones it has seen', async () => {
+  const page = await startTracker({ now: T0 });
+  page.clearCalls();
+  await page.fastTick();
+  assert.equal(page.stratumCalls().length, 1);
+  assert.equal(periods(page, '/pool/blocks')[0], '1h');
+  assert.equal(page.rpcCalls().length, 0, 'no feed data on this page, so the fast poll reads no chain data');
+  assert.match(page.el('trk-feed').innerHTML, /Waiting for the next workshare/, 'what was already there is not announced');
+  const before = page.text('trk-ws-24h');
+  const fresh = { height: 10_600_007, hash: '0x' + 'c'.repeat(64), worker: `${DEFAULT_ADDR}.rig-<b>`, algorithm: 'sha256', difficulty: '1', foundAt: new Date(T0 - 5000).toISOString() };
+  page.world.blocks1h = () => [...defaultWorld().blocks1h(), fresh];
+  await page.fastTick();
+  const feed = page.el('trk-feed').innerHTML;
+  assert.match(feed, /<li class="trk-ev trk-ev-ws trk-tick"><b>workshare<\/b><span>rig-&lt;b&gt; found a workshare at height 10,600,007<\/span><time>just now<\/time><\/li>/);
+  assert.doesNotMatch(feed, /<b>rig/);
+  assert.match(page.el('trk-ws-body').innerHTML, /^<tr class="trk-tick"><td><a href="https:\/\/quaiscan\.io\/block\/10600007"/);
+  assert.equal(page.text('trk-ws-24h'), String(Number(before) + 1));
+  assert.equal(page.text('trk-p-ws'), page.text('trk-ws-24h'));
+  await page.fastTick();
+  assert.equal((page.el('trk-feed').innerHTML.match(/<li /g) || []).length, 1, 'the same workshare is not announced twice');
+  assert.equal(page.text('trk-ws-24h'), String(Number(before) + 1));
+});
+
+test('the fast poll respects the same invariants as the slow one: a hidden tab asks for nothing, a stale address answer is dropped', async () => {
+  let release;
+  const old = new Promise((resolve) => { release = resolve; });
+  let armed = false;
+  const page = await startTracker({ now: T0, world: defaultWorld({ blocks1h: (addrs) => (addrs[0] === DEFAULT_ADDR && armed ? old : []) }) });
+  page.hidden(true);
+  page.clearCalls();
+  await page.fastTick();
+  assert.equal(page.calls.length, 0, 'a hidden tab does not poll');
+  page.hidden(false);
+  await page.settle();
+  page.clearCalls();
+  armed = true;
+  const pending = page.fastTick();
+  await page.settle();
+  await page.check(OTHER_ADDR);
+  const feedBefore = page.el('trk-feed').innerHTML;
+  release([{ height: 10_600_009, hash: '0x' + 'd'.repeat(64), worker: `${DEFAULT_ADDR}.old`, algorithm: 'sha256', difficulty: '1', foundAt: new Date(T0 - 1000).toISOString() }]);
+  await pending;
+  await page.settle();
+  assert.equal(page.el('trk-feed').innerHTML, feedBefore, 'an answer for the old address paints nothing');
 });

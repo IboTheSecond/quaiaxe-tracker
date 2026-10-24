@@ -174,6 +174,97 @@ header.top { border-bottom: 1px solid var(--line); background: rgba(13, 9, 8, .8
 .chart .lab-x { bottom: 2px; white-space: nowrap; }
 @media (max-width: 640px) { .dtable table { font-size: 12px; } .dtable th, .dtable td { padding: 10px 10px; } }
 
+/* ---- /tracker v2 (1.14.0): proof strip, furnace strip, live feed, range tabs, charts, fee loop, share. Motion is transform and opacity only, and off under reduced motion. ---- */
+.btn[hidden] { display: none; }
+.page-head.trk-head { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px clamp(24px, 5vw, 72px); align-items: end; }
+.page-head.trk-head h1 { font-size: clamp(56px, 8.4vw, 132px); }
+.trk-head-copy { display: grid; gap: 22px; align-content: end; min-width: 0; }
+.trk-live { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.trk-conn { display: inline-flex; align-items: center; gap: 8px; }
+.trk-conn::before { content: ''; width: 8px; height: 8px; background: var(--fg-3); }
+.trk-conn.live::before { background: var(--ok); box-shadow: 0 0 10px rgba(74, 222, 128, .55); }
+.trk-proof { display: grid; min-width: 0; border: 1px solid var(--line-2); background: var(--bg-2); }
+.trk-proof > div { display: grid; gap: 8px; padding: 18px clamp(16px, 2vw, 28px) 20px; border-top: 1px solid var(--line-2); }
+.trk-proof > div:first-child { border-top: 0; }
+.trk-proof p { margin: 0; color: var(--fg-2); font-size: 14px; }
+.trk-fig { margin: 0; font: 900 clamp(40px, 4.6vw, 68px)/.92 var(--display); text-transform: uppercase; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.trk-fig-hot { color: var(--ember); text-shadow: 0 0 48px rgba(255, 74, 28, .32); }
+@media (max-width: 960px) { .page-head.trk-head { grid-template-columns: 1fr; } }
+
+.trk-strip-wrap { display: grid; gap: 10px; padding: 22px 0 26px; border-bottom: 1px solid var(--line); }
+.trk-strip { display: grid; grid-template-columns: repeat(48, minmax(0, 1fr)); gap: 3px; }
+.trk-strip i { display: block; height: clamp(14px, 2vw, 24px); background: rgba(243, 236, 228, .06); transform-origin: bottom; }
+.trk-strip i.fresh { background: var(--heat); box-shadow: 0 0 14px rgba(255, 196, 110, .65); }
+.trk-strip i.h1 { background: var(--ember); box-shadow: 0 0 10px rgba(255, 74, 28, .45); }
+.trk-strip i.h2 { background: var(--blood); }
+.trk-strip i.share { background: var(--coal); }
+.trk-strip-cap { margin: 0; }
+.sec.trk-sec-tight { padding-block: clamp(40px, 6vw, 72px); }
+
+@keyframes trk-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes trk-pop { from { opacity: 0; transform: scaleY(.15); } to { opacity: 1; transform: none; } }
+.trk-tick { animation: trk-in .8s var(--ease) both; }
+.trk-strip i.trk-tick { animation-name: trk-pop; }
+@media (prefers-reduced-motion: reduce) { .trk-tick, .trk-strip i.trk-tick { animation: none; } }
+
+.trk-feed { list-style: none; margin: 0; padding: 0; max-height: 440px; overflow-y: auto; border: 1px solid var(--line-2); background: var(--bg-2); }
+.trk-feed li { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; align-items: baseline; gap: 6px 16px; padding: 11px 16px; border-bottom: 1px solid var(--line); font: 400 13px/1.5 var(--mono); color: var(--fg-2); }
+.trk-feed li:last-child { border-bottom: 0; }
+.trk-feed li.trk-feed-empty { display: block; color: var(--fg-3); }
+.trk-ev b { font: 600 11px/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; padding-left: 10px; border-left: 3px solid var(--fg-3); color: var(--fg-2); }
+.trk-ev-ws b { border-color: var(--heat); color: var(--heat); }
+.trk-ev-sweep b { border-color: var(--ember); color: var(--ember); }
+.trk-ev-feeburn b { border-color: var(--ember-2); color: var(--ember-2); border-left-style: dotted; }
+.trk-ev-buy b { border-color: var(--fg); color: var(--fg); }
+.trk-ev time { color: var(--fg-3); white-space: nowrap; }
+.trk-ev a { color: var(--heat); text-decoration: none; }
+.trk-ev a:hover { text-decoration: underline; }
+@media (max-width: 640px) { .trk-feed li { grid-template-columns: 1fr; padding: 12px; } }
+
+.trk-tabs { display: inline-flex; margin: 0 0 14px; border: 1px solid var(--line-2); }
+.trk-tabs button { min-height: 44px; padding: 12px 18px; font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--fg-2); background: transparent; border: 0; cursor: pointer; transition: background .2s, color .2s; }
+.trk-tabs button + button { border-left: 1px solid var(--line-2); }
+.trk-tabs button:hover { color: var(--fg); background: rgba(243, 236, 228, .04); }
+.trk-tabs button[aria-pressed="true"] { background: var(--ember); color: var(--bg); }
+.trk-sub { margin-top: clamp(32px, 4vw, 56px); }
+.trk-h3 { margin: 0 0 8px; font: 800 clamp(26px, 3vw, 40px)/1 var(--display); text-transform: uppercase; }
+.trk-readout { min-height: 1.3em; margin: 10px 0 0; }
+.chart { position: relative; }
+.chart .trk-grid { stroke: var(--line); stroke-width: 1; }
+.chart .trk-area { fill: rgba(255, 74, 28, .12); stroke: none; }
+.chart .trk-ln { fill: none; stroke: var(--ember); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.chart .trk-pt { fill: var(--heat); }
+.chart .trk-pt.hot { fill: var(--ember); }
+.chart .trk-bar-burned { fill: var(--ember); }
+.chart .trk-bar-held { fill: var(--heat); }
+.chart .trk-bar-pending { fill: var(--fg-3); }
+.chart .trk-note { font: 400 13px/1.5 var(--mono); color: var(--fg-3); }
+.dtable tr.trk-row td { color: var(--fg); }
+
+.trk-split { display: flex; height: 44px; border: 1px solid var(--line-2); }
+.trk-seg { display: grid; place-items: center; font: 600 12px/1 var(--mono); letter-spacing: .08em; color: var(--bg); }
+.trk-split .trk-seg-direct { flex: 50 1 0; }
+.trk-split .trk-seg-buyback { flex: 25 1 0; }
+.trk-split .trk-seg-hartii { flex: 25 1 0; }
+.trk-seg-direct { background: var(--ember); }
+.trk-seg-buyback { background: var(--heat); }
+.trk-seg-hartii { background: var(--coal); color: var(--fg-2); }
+.trk-legend { display: grid; gap: 8px; margin: 14px 0 28px; padding: 0; list-style: none; font-size: 14px; color: var(--fg-2); }
+.trk-legend li { display: flex; align-items: center; gap: 10px; }
+.trk-legend i { flex: none; width: 14px; height: 14px; }
+.plate.trk-plate-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.plate.trk-plate-5 h3 { font-size: 24px; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .plate.trk-plate-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .plate.trk-plate-5 > div:nth-child(5) { grid-column: 1 / -1; border-left: 0; } }
+@media (max-width: 520px) { .plate.trk-plate-5 { grid-template-columns: 1fr; } }
+
+.trk-share { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; gap: 28px clamp(24px, 4vw, 56px); }
+.trk-card { margin: 0; border: 1px solid var(--line-2); background: var(--bg-2); }
+.trk-card img { width: 100%; height: auto; }
+.trk-card figcaption { padding: 0 14px 12px; }
+.trk-embed { display: grid; gap: 14px; min-width: 0; }
+.trk-code { width: 100%; padding: 12px; font: 400 13px/1.5 var(--mono); color: var(--fg); background: var(--inset); border: 1px solid var(--line-2); border-radius: 0; resize: vertical; }
+@media (max-width: 860px) { .trk-share { grid-template-columns: 1fr; } }
+
 /* ==== page shell: rules that exist only in this repository ==== */
 .bar { gap: 20px; }
 footer.foot { border-top: 1px solid var(--line); padding-block: 40px 56px; }

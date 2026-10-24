@@ -172,12 +172,12 @@
     "tr": "bloğu gör ↗"
   },
   "tracker.chart.h2": {
-    "en": "Hashrate, 24h",
-    "tr": "Hashrate, 24s"
+    "en": "Hashrate",
+    "tr": "Hashrate"
   },
   "tracker.chart.aria": {
-    "en": "Line chart of combined hashrate over the last 24 hours.",
-    "tr": "Son 24 saatteki toplam hashrate’in çizgi grafiği."
+    "en": "Line chart of combined hashrate over the selected range.",
+    "tr": "Seçili aralıktaki toplam hashrate’in çizgi grafiği."
   },
   "tracker.chart.empty": {
     "en": "No hashrate history yet.",
@@ -228,8 +228,8 @@
     "tr": "Kendi adresinizi kontrol edin"
   },
   "tracker.check.p": {
-    "en": "Paste any Cyprus-1 deposit address — including your own split-mode address — to see its own live stats above.",
-    "tr": "Herhangi bir Cyprus-1 yatırma adresini — kendi bölünmüş modlu adresiniz dahil — yapıştırın, yukarıda kendi canlı istatistiklerini görün."
+    "en": "Paste any Cyprus-1 deposit address — including your own split-mode address — to see its hashrate, workshares, rewards and unlock schedule. Every section above switches to that address.",
+    "tr": "Herhangi bir Cyprus-1 yatırma adresini — kendi bölünmüş modlu adresiniz dahil — yapıştırın; hashrate, workshare, ödül ve kilit açılma takvimini görün. Yukarıdaki her bölüm o adrese geçer."
   },
   "tracker.check.label": {
     "en": "Deposit address",
@@ -254,5 +254,409 @@
   "tracker.check.default": {
     "en": "default tracked address",
     "tr": "varsayılan takip edilen adres"
+  },
+  "tracker.proof.burn.label": {
+    "en": "$QAXE burned by mining",
+    "tr": "Madencilikle yakılan $QAXE"
+  },
+  "tracker.proof.burn.sub": {
+    "en": "burn vault counter, read from the chain",
+    "tr": "yakım kasası sayacı, zincirden okunur"
+  },
+  "tracker.proof.hr.label": {
+    "en": "Hashrate on this address",
+    "tr": "Bu adreste hashrate"
+  },
+  "tracker.proof.hr.sub": {
+    "en": "all algorithms, from StratumX",
+    "tr": "tüm algoritmalar, StratumX’ten"
+  },
+  "tracker.proof.ws.label": {
+    "en": "Workshares, 24h",
+    "tr": "Workshare, 24s"
+  },
+  "tracker.proof.ws.sub": {
+    "en": "found by this address",
+    "tr": "bu adresin bulduğu"
+  },
+  "tracker.conn.live": {
+    "en": "live feed on",
+    "tr": "canlı akış açık"
+  },
+  "tracker.conn.poll": {
+    "en": "checking every 10s",
+    "tr": "10 sn’de bir kontrol"
+  },
+  "tracker.strip.aria": {
+    "en": "The last 48 workshares, newest on the right. The hotter the cell, the fresher the workshare.",
+    "tr": "Son 48 workshare, en yenisi sağda. Hücre ne kadar sıcaksa workshare o kadar tazedir."
+  },
+  "tracker.strip.cap": {
+    "en": "last 48 workshares · newest on the right",
+    "tr": "son 48 workshare · en yenisi sağda"
+  },
+  "tracker.feed.h2": {
+    "en": "Live feed",
+    "tr": "Canlı akış"
+  },
+  "tracker.feed.p": {
+    "en": "New workshares, mining burns and fee-loop buys and burns appear here the moment they are seen. Each kind is labelled and none are added together.",
+    "tr": "Yeni workshare’ler, madencilik yakımları ve ücret döngüsü alım ve yakımları görüldüğü anda burada belirir. Her tür ayrı etiketlidir ve hiçbiri toplanmaz."
+  },
+  "tracker.feed.empty": {
+    "en": "Waiting for the next workshare, burn or buy. Only things the pool or the chain reported appear here.",
+    "tr": "Sonraki workshare, yakım veya alım bekleniyor. Burada yalnızca havuzun veya zincirin bildirdikleri görünür."
+  },
+  "tracker.feed.kind.ws": {
+    "en": "workshare",
+    "tr": "workshare"
+  },
+  "tracker.feed.kind.sweep": {
+    "en": "mining burn",
+    "tr": "madencilik yakımı"
+  },
+  "tracker.feed.kind.buy": {
+    "en": "fee-loop buy",
+    "tr": "ücret döngüsü alımı"
+  },
+  "tracker.feed.kind.feeburn": {
+    "en": "fee-loop burn",
+    "tr": "ücret döngüsü yakımı"
+  },
+  "tracker.feed.ws": {
+    "en": "{who} found a workshare at height {n}",
+    "tr": "{who}, {n}. yükseklikte bir workshare buldu"
+  },
+  "tracker.feed.sweep": {
+    "en": "{n} $QAXE burned by mining",
+    "tr": "Madencilikle {n} $QAXE yakıldı"
+  },
+  "tracker.feed.buy": {
+    "en": "{n} $QAXE bought by the Hartii wallet",
+    "tr": "Hartii cüzdanı {n} $QAXE satın aldı"
+  },
+  "tracker.feed.feeburn": {
+    "en": "{n} $QAXE burned by the Hartii wallet",
+    "tr": "Hartii cüzdanı {n} $QAXE yaktı"
+  },
+  "tracker.top.h2": {
+    "en": "Top rigs",
+    "tr": "En güçlü rig’ler"
+  },
+  "tracker.top.p": {
+    "en": "The busiest workers on this address, by hashrate. Rig names are typed by the miners and shown as plain text. This is the tracked address only, not the whole StratumX pool.",
+    "tr": "Bu adresteki en yoğun worker’lar, hashrate’e göre. Rig adlarını madenciler yazar ve düz metin olarak gösterilir. Bu yalnızca takip edilen adrestir, tüm StratumX havuzu değildir."
+  },
+  "tracker.top.rank": {
+    "en": "#",
+    "tr": "#"
+  },
+  "tracker.top.rig": {
+    "en": "Rig",
+    "tr": "Rig"
+  },
+  "tracker.top.miner": {
+    "en": "Payout address",
+    "tr": "Ödeme adresi"
+  },
+  "tracker.top.share": {
+    "en": "Share of hashrate",
+    "tr": "Hashrate payı"
+  },
+  "tracker.top.empty": {
+    "en": "No rigs with hashrate right now.",
+    "tr": "Şu anda hashrate’i olan rig yok."
+  },
+  "tracker.range.aria": {
+    "en": "Time range",
+    "tr": "Zaman aralığı"
+  },
+  "tracker.range.1h": {
+    "en": "1h",
+    "tr": "1s"
+  },
+  "tracker.range.24h": {
+    "en": "24h",
+    "tr": "24s"
+  },
+  "tracker.range.7d": {
+    "en": "7d",
+    "tr": "7g"
+  },
+  "tracker.chart.readout.hint": {
+    "en": "Move over the chart to read a point.",
+    "tr": "Bir noktayı okumak için grafiğin üzerinde gezinin."
+  },
+  "tracker.luck.h3": {
+    "en": "Workshare luck",
+    "tr": "Workshare şansı"
+  },
+  "tracker.luck.p": {
+    "en": "Each dot is one workshare, placed by time and by luck (how its difficulty compared with what was expected, on a log scale).",
+    "tr": "Her nokta bir workshare’dir; zamana ve şansa göre konumlanır (zorluğunun beklenenle karşılaştırması, log ölçekte)."
+  },
+  "tracker.luck.aria": {
+    "en": "Scatter chart of workshare luck over the selected range.",
+    "tr": "Seçili aralıktaki workshare şansının dağılım grafiği."
+  },
+  "tracker.luck.empty": {
+    "en": "No workshares in this range.",
+    "tr": "Bu aralıkta workshare yok."
+  },
+  "tracker.schedule.h3": {
+    "en": "Unlock schedule, estimate",
+    "tr": "Kilit açılma takvimi, tahmini"
+  },
+  "tracker.schedule.p": {
+    "en": "StratumX publishes no reward amounts, so this lists the workshares of each day and the day that batch should unlock: found day + about 14 days.",
+    "tr": "StratumX ödül miktarlarını yayımlamaz; bu yüzden her günün workshare’lerini ve o grubun kilidinin açılması beklenen günü listeler: bulunduğu gün + yaklaşık 14 gün."
+  },
+  "tracker.schedule.day": {
+    "en": "Found on",
+    "tr": "Bulunduğu gün"
+  },
+  "tracker.schedule.count": {
+    "en": "Workshares",
+    "tr": "Workshare"
+  },
+  "tracker.schedule.unlock": {
+    "en": "Unlocks about",
+    "tr": "Yaklaşık açılma"
+  },
+  "tracker.schedule.empty": {
+    "en": "No workshares in the last 7 days, so there is nothing to schedule.",
+    "tr": "Son 7 günde workshare yok; takvimlenecek bir şey yok."
+  },
+  "tracker.burnchart.h3": {
+    "en": "Mining burns over time",
+    "tr": "Zaman içinde madencilik yakımları"
+  },
+  "tracker.burnchart.p": {
+    "en": "Cumulative $QAXE burned by the mining burn vault only, from its sweeps on chain. Never combined with any other burn.",
+    "tr": "Yalnızca madencilik yakım kasasının zincirdeki taramalarından biriken yakılan $QAXE. Başka hiçbir yakımla birleştirilmez."
+  },
+  "tracker.burnchart.aria": {
+    "en": "Step chart of cumulative $QAXE burned by mining.",
+    "tr": "Madencilikle yakılan birikimli $QAXE’nin basamak grafiği."
+  },
+  "tracker.burnchart.empty": {
+    "en": "No mining burn sweeps recorded yet.",
+    "tr": "Henüz kayıtlı madencilik yakım taraması yok."
+  },
+  "tracker.fl.h2": {
+    "en": "QuaiAxe fee loop",
+    "tr": "QuaiAxe ücret döngüsü"
+  },
+  "tracker.fl.p": {
+    "en": "QuaiAxe gets 75% of its own $QAXE curve fees: 50% goes straight to QuaiAxe by the curve contract, and 25% (half of Hartii’s half) comes back as $QAXE buybacks. Each buyback burns half of what it bought and holds the other half.",
+    "tr": "QuaiAxe, kendi $QAXE eğri ücretlerinin %75’ini alır: %50’si eğri sözleşmesi gereği doğrudan QuaiAxe’e gider, %25’i (Hartii’nin yarısının yarısı) $QAXE geri alımı olarak döner. Her geri alım, aldığının yarısını yakar, diğer yarısını tutar."
+  },
+  "tracker.fl.split.aria": {
+    "en": "How the curve fees are split: 50% to QuaiAxe, 25% as buybacks, 25% to Hartii.",
+    "tr": "Eğri ücretlerinin bölünmesi: %50 QuaiAxe, %25 geri alım, %25 Hartii."
+  },
+  "tracker.fl.split.direct": {
+    "en": "50% straight to QuaiAxe, by the curve contract split",
+    "tr": "%50 doğrudan QuaiAxe’e, eğri sözleşmesi bölüşümüyle"
+  },
+  "tracker.fl.split.buyback": {
+    "en": "25% as $QAXE buybacks: half burned, half held",
+    "tr": "%25 $QAXE geri alımı olarak: yarısı yakılır, yarısı tutulur"
+  },
+  "tracker.fl.split.hartii": {
+    "en": "25% stays with Hartii",
+    "tr": "%25 Hartii’de kalır"
+  },
+  "tracker.fl.note": {
+    "en": "Buybacks run in batches and pause between them, so this table lists only buybacks seen on chain. These are fee-loop burns: they are a separate figure from the mining burns above and are never added to them.",
+    "tr": "Geri alımlar toplu çalışır ve aralarında durur; bu yüzden tablo yalnızca zincirde görülen geri alımları listeler. Bunlar ücret döngüsü yakımlarıdır: yukarıdaki madencilik yakımlarından ayrı bir rakamdır ve onlara asla eklenmez."
+  },
+  "tracker.fl.runs.label": {
+    "en": "buybacks seen",
+    "tr": "görülen geri alım"
+  },
+  "tracker.fl.runs.sub": {
+    "en": "since the fee loop began",
+    "tr": "ücret döngüsü başladığından beri"
+  },
+  "tracker.fl.quai.label": {
+    "en": "QUAI spent",
+    "tr": "Harcanan QUAI"
+  },
+  "tracker.fl.quai.sub": {
+    "en": "on those buybacks",
+    "tr": "bu geri alımlara"
+  },
+  "tracker.fl.bought.label": {
+    "en": "$QAXE bought",
+    "tr": "Alınan $QAXE"
+  },
+  "tracker.fl.bought.sub": {
+    "en": "received by the Hartii wallet",
+    "tr": "Hartii cüzdanının aldığı"
+  },
+  "tracker.fl.burned.label": {
+    "en": "$QAXE burned, fee loop",
+    "tr": "Yakılan $QAXE, ücret döngüsü"
+  },
+  "tracker.fl.burned.sub": {
+    "en": "half of each buyback, not mining burns",
+    "tr": "her geri alımın yarısı, madencilik yakımı değil"
+  },
+  "tracker.fl.held.label": {
+    "en": "$QAXE held",
+    "tr": "Tutulan $QAXE"
+  },
+  "tracker.fl.held.sub": {
+    "en": "the other half of each buyback",
+    "tr": "her geri alımın diğer yarısı"
+  },
+  "tracker.fl.col.date": {
+    "en": "Date (UTC)",
+    "tr": "Tarih (UTC)"
+  },
+  "tracker.fl.col.quai": {
+    "en": "QUAI spent",
+    "tr": "Harcanan QUAI"
+  },
+  "tracker.fl.col.bought": {
+    "en": "$QAXE bought",
+    "tr": "Alınan $QAXE"
+  },
+  "tracker.fl.col.burned": {
+    "en": "Burned",
+    "tr": "Yakılan"
+  },
+  "tracker.fl.col.held": {
+    "en": "Held",
+    "tr": "Tutulan"
+  },
+  "tracker.fl.col.tx": {
+    "en": "Transactions",
+    "tr": "İşlemler"
+  },
+  "tracker.fl.pending": {
+    "en": "not seen yet",
+    "tr": "henüz görülmedi"
+  },
+  "tracker.fl.tx.buy": {
+    "en": "buy ↗",
+    "tr": "alım ↗"
+  },
+  "tracker.fl.tx.burn": {
+    "en": "burn ↗",
+    "tr": "yakım ↗"
+  },
+  "tracker.fl.empty": {
+    "en": "No fee-loop buyback seen on chain yet.",
+    "tr": "Zincirde henüz ücret döngüsü geri alımı görülmedi."
+  },
+  "tracker.fl.chart.h3": {
+    "en": "Buybacks over time",
+    "tr": "Zaman içinde geri alımlar"
+  },
+  "tracker.fl.chart.aria": {
+    "en": "Bars of $QAXE bought per fee-loop buyback, split into burned and held.",
+    "tr": "Ücret döngüsü geri alımı başına alınan $QAXE çubukları; yakılan ve tutulan olarak bölünmüş."
+  },
+  "tracker.fl.chart.empty": {
+    "en": "No buybacks to chart yet.",
+    "tr": "Grafiğe dökülecek geri alım henüz yok."
+  },
+  "tracker.fl.chart.burned": {
+    "en": "burned",
+    "tr": "yakılan"
+  },
+  "tracker.fl.chart.held": {
+    "en": "held",
+    "tr": "tutulan"
+  },
+  "tracker.fl.link": {
+    "en": "every company buyback, on the buyback page ↗",
+    "tr": "tüm şirket geri alımları, geri alım sayfasında ↗"
+  },
+  "tracker.check.reset": {
+    "en": "Back to the QuaiAxe address",
+    "tr": "QuaiAxe adresine dön"
+  },
+  "tracker.share.h2": {
+    "en": "Share and embed",
+    "tr": "Paylaş ve göm"
+  },
+  "tracker.share.p": {
+    "en": "A card with the real numbers, a snippet that puts a few live tiles on your own site, and alerts if a Telegram bot is set up.",
+    "tr": "Gerçek rakamlı bir kart, birkaç canlı karoyu kendi sitenize koyan bir kod parçası ve kurulmuşsa Telegram uyarıları."
+  },
+  "tracker.share.card.alt": {
+    "en": "The QuaiAxe tracker card with the burned amount and hashrate as of the date shown.",
+    "tr": "Gösterilen tarih itibarıyla yakılan miktar ve hashrate içeren QuaiAxe takip kartı."
+  },
+  "tracker.share.card.asof": {
+    "en": "Card as of {date} (UTC). It is regenerated from real reads with each release.",
+    "tr": "Kart {date} (UTC) itibarıyla. Her sürümde gerçek okumalardan yeniden üretilir."
+  },
+  "tracker.share.card.download": {
+    "en": "Download the card",
+    "tr": "Kartı indir"
+  },
+  "tracker.share.link": {
+    "en": "Share this page",
+    "tr": "Bu sayfayı paylaş"
+  },
+  "tracker.share.copied": {
+    "en": "Copied",
+    "tr": "Kopyalandı"
+  },
+  "tracker.embed.h3": {
+    "en": "Embed the live tiles",
+    "tr": "Canlı karoları göm"
+  },
+  "tracker.embed.p": {
+    "en": "Paste this where you want the tiles. They read the same public sources as this page.",
+    "tr": "Karoların görünmesini istediğiniz yere yapıştırın. Bu sayfayla aynı herkese açık kaynakları okurlar."
+  },
+  "tracker.embed.copy": {
+    "en": "Copy the snippet",
+    "tr": "Kod parçasını kopyala"
+  },
+  "tracker.embed.label": {
+    "en": "Embed snippet",
+    "tr": "Gömme kodu"
+  },
+  "tracker.embed.iframe.title": {
+    "en": "QuaiAxe live tracker tiles",
+    "tr": "QuaiAxe canlı takip karoları"
+  },
+  "tracker.telegram.cta": {
+    "en": "Get alerts on Telegram",
+    "tr": "Telegram’da uyarı al"
+  },
+  "tracker.embed.title": {
+    "en": "QuaiAxe — live tracker tiles",
+    "tr": "QuaiAxe — canlı takip karoları"
+  },
+  "tracker.embed.description": {
+    "en": "A few live QuaiAxe tracker tiles for other sites to embed.",
+    "tr": "Diğer sitelerin gömebileceği birkaç canlı QuaiAxe takip karosu."
+  },
+  "tracker.embed.open": {
+    "en": "Open the full tracker ↗",
+    "tr": "Tam takipçiyi aç ↗"
+  },
+  "tracker.embed.hr": {
+    "en": "Hashrate",
+    "tr": "Hashrate"
+  },
+  "tracker.embed.workers": {
+    "en": "Workers online",
+    "tr": "Çevrimiçi worker"
+  },
+  "tracker.embed.ws": {
+    "en": "Workshares, 24h",
+    "tr": "Workshare, 24s"
+  },
+  "tracker.embed.burn": {
+    "en": "$QAXE burned by mining",
+    "tr": "Madencilikle yakılan $QAXE"
   }
 }

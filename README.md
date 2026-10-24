@@ -1,6 +1,6 @@
 # QuaiAxe tracker
 
-Source release: 1.0.4.
+Source release: 1.0.5.
 
 A live, read-only page for people who mine to a QuaiAxe deposit address on Quai Network (Cyprus-1). For an address it shows the workers the pool sees, their hashrate and shares, the workshares found, the QUAI still locked and the QUAI already unlocked, an estimate of the next unlock, and how much QAXE the burn vault has destroyed through mining.
 
@@ -8,13 +8,13 @@ It is static HTML, CSS and JavaScript. There is no backend, no cookie, no analyt
 
 ## What it shows
 
-1. **Live miners**: workers online and in total, SHA-256, Scrypt and KawPoW hashrate, valid, stale and invalid shares, and a table of workers.
-2. **Workshares**: the count for 24 hours and for 7 days, the best share of the last 24 hours, and a table of the newest 50.
-3. **Hashrate, 24h**: a line chart, with a readout when you point at it.
-4. **Rewards and burn**: locked and unlocked QUAI for the address, an estimate of the next unlock, and the QAXE burned by mining, read from the burn vault.
-5. **Check your own address**: the same page for any other deposit address you paste in.
+1. **Live miners**: workers online and in total, SHA-256, Scrypt and KawPoW hashrate, valid, stale and invalid shares, a table of the busiest rigs (rig names are typed by the miners and shown as plain text) and a table of workers.
+2. **Hashrate**: a line chart with 1h, 24h and 7d tabs (the periods the pool API accepts), with a readout when you point at it.
+3. **Workshares**: the count for 24 hours and for 7 days, the best share of the last 24 hours, a luck chart for 24h or 7d, a table of the newest 50, and a strip of the last 48 workshares, newest on the right, hotter when fresher.
+4. **Rewards and burn**: locked and unlocked QUAI for the address, an estimate of the next unlock, a schedule of workshares per day with the day each batch should unlock (an estimate: found day plus about 14 days; the pool publishes no reward amounts), and the QAXE burned by mining, read from the burn vault.
+5. **Check your own address**: the same page for any other deposit address you paste in, with a button back to the default.
 
-English is at `/` and Turkish at `/tr/`. The page refreshes every 30 seconds while its tab is visible and pauses while the tab is hidden.
+English is at `/` and Turkish at `/tr/`. The page refreshes every 30 seconds while its tab is visible and pauses while the tab is hidden. New workshares are picked up every 10 seconds and announced in a live feed.
 
 ## Network calls
 
@@ -24,15 +24,16 @@ These are all of the requests the page makes, from the visitor's browser. The `q
 | --- | --- | --- | --- |
 | `backend.stratumx.org` | `POST /api/miners/batch` with the tracked addresses | on load, then every 30 s | workers, hashrate, shares |
 | `backend.stratumx.org` | `GET /api/pool/blocks?addresses=...&period=24h` and `...&period=7d` | same | workshares: the 24-hour count, the 7-day table, the unlock estimate |
-| `backend.stratumx.org` | `GET /api/pool/shares?addresses=...&period=24h` | same | the best share |
-| `backend.stratumx.org` | `GET /api/miner/hashrate/history?addresses=...&period=24h` | same | the chart |
+| `backend.stratumx.org` | `GET /api/pool/shares?addresses=...&period=24h` or `7d` (the luck range you chose; the 7d choice also asks for `24h`) | same | the luck chart and the best share |
+| `backend.stratumx.org` | `GET /api/miner/hashrate/history?addresses=...&period=1h`, `24h` or `7d` (the range you chose) | same | the hashrate chart |
+| `backend.stratumx.org` | `GET /api/pool/blocks?addresses=...&period=1h` | every 10 s | new workshares for the live feed and the strip |
 | `rpc.quai.network` | `quai_getLockedBalance` and `quai_getBalance`, once per tracked address | same | locked and unlocked QUAI |
 | `rpc.quai.network` | `eth_call` to the burn vault, selector `0xd157e301` (`totalTokensBurned()`) | same | QAXE burned by mining |
 | `rpc.quai.network` | `quai_blockNumber` | every 12 s | the block height in the header |
 
-One refresh is 5 requests to the pool and, for the RPC, two reads per tracked address plus one read of the burn vault.
+One 30 s refresh is 5 requests to the pool and, for the RPC, two reads per tracked address plus one read of the burn vault; the 10 s poll is 1 request to the pool. The pool API rejects any period other than `1h`, `24h` and `7d`, so the page offers no other.
 
-The hosts and the node are not fixed: they come from the config (see below), and the Content-Security-Policy is built from the same config, so the page can contact exactly those two hosts and no other.
+The hosts and the node are not fixed: they come from the config (see below), and the Content-Security-Policy is built from the same config, so the page can contact exactly those two hosts (and the node's secure WebSocket origin, which the policy names for sites that add a live chain feed; this page opens no socket) and no other.
 
 StratumX's API has no public documentation. The page was written against what the service returns. A missing or malformed miner batch clears every miner-derived figure; history over 1,500 points or with invalid timestamps or hashrates makes the chart unavailable. Older responses cannot repaint a newer address or poll. The tests use synthetic responses, so they do not prove current upstream behavior.
 

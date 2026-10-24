@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { contentSecurityPolicy, headersFile, originOf } from '../src/page.mjs';
+import { contentSecurityPolicy, headersFile, originOf, wssOrigin } from '../src/page.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CONFIG = JSON.parse(readFileSync(join(ROOT, 'config.example.json'), 'utf8'));
@@ -37,10 +37,15 @@ test('originOf refuses anything that is not an https URL, so a config typo fails
   }
 });
 
-test('the policy: everything from this origin, fetches to the two configured hosts, no inline style, no eval', () => {
+test('wssOrigin is the secure WebSocket origin of the same host and port, and refuses a non-https URL', () => {
+  assert.equal(wssOrigin(https('node.example:8545/x?y=1#z')), ['wss', '://', 'node.example:8545'].join(''));
+  for (const bad of [['wss', '://', 'rpc.example'].join(''), ['http', '://', 'rpc.example'].join(''), '', undefined, null, 42]) assert.throws(() => wssOrigin(bad), /config|https/);
+});
+
+test('the policy: everything from this origin, fetches to the configured RPC, its WebSocket and the pool, no inline style, no eval', () => {
   const d = directives(contentSecurityPolicy(CONFIG));
   assert.deepEqual(d['default-src'], ["'self'"]);
-  assert.deepEqual(d['connect-src'], ["'self'", originOf(CONFIG.rpc), originOf(CONFIG.stratumxApi)]);
+  assert.deepEqual(d['connect-src'], ["'self'", originOf(CONFIG.rpc), wssOrigin(CONFIG.rpc), originOf(CONFIG.stratumxApi)]);
   assert.deepEqual(d['img-src'], ["'self'", 'data:']);
   assert.deepEqual(d['font-src'], ["'self'"]);
   assert.deepEqual(d['style-src'], ["'self'"]);
@@ -58,11 +63,11 @@ test('the meta-tag form is the same policy without frame-ancestors, which a meta
 });
 test('the pool and the RPC on one host give one connect-src entry', () => {
   const same = { ...CONFIG, rpc: https('chain.example/rpc'), stratumxApi: https('chain.example/api') };
-  assert.deepEqual(directives(contentSecurityPolicy(same))['connect-src'], ["'self'", https('chain.example')]);
+  assert.deepEqual(directives(contentSecurityPolicy(same))['connect-src'], ["'self'", https('chain.example'), ['wss', '://', 'chain.example'].join('')]);
 });
 test('connect-src follows the config: a self-hoster who points at their own node gets that node, not ours', () => {
   const mine = { ...CONFIG, rpc: https('node.example:8545/cyprus1'), stratumxApi: https('pool.example/api') };
-  assert.deepEqual(directives(contentSecurityPolicy(mine))['connect-src'], ["'self'", https('node.example:8545'), https('pool.example')]);
+  assert.deepEqual(directives(contentSecurityPolicy(mine))['connect-src'], ["'self'", https('node.example:8545'), ['wss', '://', 'node.example:8545'].join(''), https('pool.example')]);
   assert.doesNotMatch(headersFile(mine), /quai\.network|stratumx/);
 });
 test('a config with a missing or non-https host fails instead of widening the policy', () => {

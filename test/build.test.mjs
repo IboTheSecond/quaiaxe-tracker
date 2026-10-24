@@ -87,7 +87,7 @@ test('config.json, when present, replaces config.example.json everywhere: the pa
   await build({ root, outDir });
   const html = readFileSync(join(outDir, 'index.html'), 'utf8');
   assert.deepEqual(JSON.parse(html.match(/id="trk-config">(.*?)<\/script>/)[1]), mine);
-  assert.ok(html.includes(`connect-src 'self' ${https('node.example:8545')} ${https('pool.example')};`));
+  assert.ok(html.includes(`connect-src 'self' ${https('node.example:8545')} ${['wss', '://', 'node.example:8545'].join('')} ${https('pool.example')};`));
   for (const url of [CONFIG.rpc, CONFIG.stratumxApi]) assert.ok(!html.includes(new URL(url).hostname), `${new URL(url).hostname} of the example config is left in the page`);
   assert.equal(readFileSync(join(outDir, '_headers'), 'utf8'), headersFile(mine));
 });
@@ -143,7 +143,10 @@ test('the shipped scripts keep nothing in the browser and run no dynamic code', 
   await build({ outDir });
   for (const f of ['assets/tracker.js', 'assets/page.js', 'assets/lib/tracker-lib.js']) {
     const src = readFileSync(join(outDir, f), 'utf8');
-    assert.doesNotMatch(src, /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b|document\.cookie|\bcaches\b|serviceWorker|sendBeacon|WebSocket|XMLHttpRequest|importScripts/, `${f} stores or sends something it should not`);
+    assert.doesNotMatch(src, /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b|document\.cookie|\bcaches\b|serviceWorker|sendBeacon|XMLHttpRequest|importScripts/, `${f} stores or sends something it should not`);
+    // The one socket the page opens is the RPC's own, from the config (the live feed); nothing else is ever opened.
+    const sockets = src.match(/new WebSocket\([^)]*\)/g) || [];
+    assert.ok(sockets.every((s) => s === 'new WebSocket(WSS)'), `${f} opens a socket it should not`);
     assert.doesNotMatch(src, /\beval\s*\(|new Function\s*\(|document\.write\s*\(|setTimeout\s*\(\s*['"`]/, `${f} runs dynamic code`);
   }
 });

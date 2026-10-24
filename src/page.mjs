@@ -5,6 +5,8 @@
 // Node reads this file at build time; nothing in it reaches the browser.
 import { readFileSync } from 'node:fs';
 
+import { feeLoopRowHtml, escapeHtml, safeTelegramUrl, summarizeFeedLoop, formatWei } from './lib/tracker-lib.js';
+
 const STRINGS = JSON.parse(readFileSync(new URL('./strings.json', import.meta.url), 'utf8'));
 export const LANGS = ['en', 'tr'];
 
@@ -22,9 +24,14 @@ const escapeAttr = (s) => escapeText(s).replace(/"/g, '&quot;');
 // ---------------------------------------------------------------------------------------------------------------
 // the tracker body
 // ---------------------------------------------------------------------------------------------------------------
-/** A stat tile using the `.plate` grid. */
+/** A stat tile using the existing `.plate` grid — same visual language as home's "spec plate". */
 function tile(lang, tagText, id, subKey) {
   return `<div><span class="tag hot">${tagText}</span><h3 class="mono" id="${id}">—</h3><p>${t(subKey, lang)}</p></div>`;
+}
+
+/** A tile whose figure is already known when the page is built (the fee-loop totals, from the committed snapshot). */
+function figureTile(lang, labelKey, id, subKey, text) {
+  return `<div><span class="tag hot">${t(labelKey, lang)}</span><h3 class="mono" id="${id}">${text}</h3><p>${t(subKey, lang)}</p></div>`;
 }
 
 /**
@@ -36,7 +43,25 @@ export function jsonForScript(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-export function renderTracker(lang, config) {
+const RANGES = ['1h', '24h', '7d'];
+const STRIP_CELLS = 48;
+
+function tabs(lang, id, ranges, pressed) {
+  return `<div class="trk-tabs" role="group" aria-label="${t('tracker.range.aria', lang)}" id="${id}">` +
+    ranges.map((r) => `<button type="button" id="${id}-${r}" data-range="${r}" aria-pressed="${r === pressed}">${t(`tracker.range.${r}`, lang)}</button>`).join('') +
+    '</div>';
+}
+
+/**
+ * The /tracker body. `extra` is optional and only the quaiaxe.com build passes it:
+ *   feed     - the build-time fee-loop and mining-sweep data (src/lib/tracker-feed.js); adds the data block, the mining burn
+ *              chart and the fee-loop section.
+ *   embedUrl - the absolute address of this language's /tracker/embed/ page; adds the share and embed section.
+ *   card     - { url, asOf } of the share card image.
+ * Without `extra` (the open-source tracker) the page is the live miner view alone and the script shows no fee-loop data.
+ */
+export function renderTracker(lang, config, extra = {}) {
+  const { feed = null, embedUrl = null, card = null } = extra;
   const i18nKeys = [
     'tracker.updated', 'tracker.paused', 'tracker.unavailable', 'tracker.loading',
     'tracker.miners.online.label', 'tracker.miners.total.label',
@@ -45,26 +70,159 @@ export function renderTracker(lang, config) {
     'tracker.table.empty', 'tracker.status.online', 'tracker.status.offline',
     'tracker.workshares.count24h', 'tracker.workshares.luck.avg', 'tracker.workshares.luck.best',
     'tracker.workshares.table.empty', 'tracker.workshares.viewblock',
-    'tracker.chart.empty',
+    'tracker.chart.empty', 'tracker.chart.readout.hint',
     'tracker.rewards.locked.label', 'tracker.rewards.unlocked.label', 'tracker.rewards.nextunlock.label',
     'tracker.rewards.nextunlock.basis', 'tracker.rewards.nextunlock.none', 'tracker.rewards.burned.label',
     'tracker.check.err', 'tracker.check.showing', 'tracker.check.default',
+    'tracker.conn.live', 'tracker.conn.poll',
+    'tracker.feed.empty', 'tracker.feed.kind.ws', 'tracker.feed.kind.sweep', 'tracker.feed.kind.buy', 'tracker.feed.kind.feeburn',
+    'tracker.feed.ws', 'tracker.feed.sweep', 'tracker.feed.buy', 'tracker.feed.feeburn',
+    'tracker.top.empty', 'tracker.luck.empty', 'tracker.schedule.empty',
+    'tracker.burnchart.empty', 'tracker.fl.empty', 'tracker.fl.chart.empty', 'tracker.fl.chart.burned', 'tracker.fl.chart.held',
+    'tracker.fl.pending', 'tracker.fl.tx.buy', 'tracker.fl.tx.burn',
+    'tracker.share.copied',
     'home.band.burned.loading',
   ];
   const i18n = Object.fromEntries(i18nKeys.map((k) => [k, t(k, lang)]));
-  return `
+  const telegram = safeTelegramUrl(config.trackerBotUrl);
+  // Section numbers are filled in document order at the end (the optional sections are built before the ones around them).
+  const idx = () => '__IDX__';
+  const dataBlock = feed ? `\n  <script type="application/json" id="trk-data">${jsonForScript({ feed })}</script>` : '';
+
+  const summary = feed ? summarizeFeedLoop(feed.buys) : null;
+  const flRows = feed && feed.buys.length
+    ? feed.buys.map((r) => feeLoopRowHtml(r, { lang, labels: { pending: t('tracker.fl.pending', lang), buy: t('tracker.fl.tx.buy', lang), burn: t('tracker.fl.tx.burn', lang) } })).join('')
+    : `<tr><td colspan="6">${t('tracker.fl.empty', lang)}</td></tr>`;
+
+  const burnChart = feed ? `
+    <div class="trk-sub rv">
+      <h3 class="trk-h3">${t('tracker.burnchart.h3', lang)}</h3>
+      <p class="note">${t('tracker.burnchart.p', lang)}</p>
+      <div class="chart" id="trk-burn-chart" role="img" aria-label="${t('tracker.burnchart.aria', lang)}">
+        <p class="note" id="trk-burn-status">${t('tracker.loading', lang)}</p>
+      </div>
+      <p class="tag trk-readout" id="trk-burn-readout">&nbsp;</p>
+    </div>` : '';
+
+  const feeLoop = feed ? `
+  <section class="sec" id="trk-fl" aria-labelledby="trk-fl-h">
+    <header class="sec-head rv">
+      <span class="idx">${idx()}</span>
+      <h2 id="trk-fl-h">${t('tracker.fl.h2', lang)}</h2>
+      <p>${t('tracker.fl.p', lang)}</p>
+    </header>
+    <div class="trk-split rv" role="img" aria-label="${t('tracker.fl.split.aria', lang)}">
+      <span class="trk-seg trk-seg-direct">50%</span><span class="trk-seg trk-seg-buyback">25%</span><span class="trk-seg trk-seg-hartii">25%</span>
+    </div>
+    <ul class="trk-legend rv">
+      <li><i class="trk-seg-direct"></i>${t('tracker.fl.split.direct', lang)}</li>
+      <li><i class="trk-seg-buyback"></i>${t('tracker.fl.split.buyback', lang)}</li>
+      <li><i class="trk-seg-hartii"></i>${t('tracker.fl.split.hartii', lang)}</li>
+    </ul>
+    <div class="plate trk-plate-5 rv">
+      ${figureTile(lang, 'tracker.fl.runs.label', 'trk-fl-runs', 'tracker.fl.runs.sub', String(summary.runs))}
+      ${figureTile(lang, 'tracker.fl.quai.label', 'trk-fl-quai', 'tracker.fl.quai.sub', summary.runs ? formatWei(summary.quai, 2, lang) : '—')}
+      ${figureTile(lang, 'tracker.fl.bought.label', 'trk-fl-bought', 'tracker.fl.bought.sub', summary.runs ? formatWei(summary.qaxe, 0, lang) : '—')}
+      ${figureTile(lang, 'tracker.fl.burned.label', 'trk-fl-burned', 'tracker.fl.burned.sub', summary.runs ? formatWei(summary.burned, 0, lang) : '—')}
+      ${figureTile(lang, 'tracker.fl.held.label', 'trk-fl-held', 'tracker.fl.held.sub', summary.runs ? formatWei(summary.held, 0, lang) : '—')}
+    </div>
+    <div class="dtable rv trk-gap">
+      <table>
+        <thead><tr>
+          <th>${t('tracker.fl.col.date', lang)}</th>
+          <th>${t('tracker.fl.col.quai', lang)}</th>
+          <th>${t('tracker.fl.col.bought', lang)}</th>
+          <th>${t('tracker.fl.col.burned', lang)}</th>
+          <th>${t('tracker.fl.col.held', lang)}</th>
+          <th>${t('tracker.fl.col.tx', lang)}</th>
+        </tr></thead>
+        <tbody id="trk-fl-body">${flRows}</tbody>
+      </table>
+    </div>
+    <div class="trk-sub rv">
+      <h3 class="trk-h3">${t('tracker.fl.chart.h3', lang)}</h3>
+      <div class="chart" id="trk-fl-chart" role="img" aria-label="${t('tracker.fl.chart.aria', lang)}">
+        <p class="note" id="trk-fl-chart-status">${t('tracker.loading', lang)}</p>
+      </div>
+      <p class="tag trk-readout" id="trk-fl-readout">&nbsp;</p>
+    </div>
+    <p class="note">${t('tracker.fl.note', lang)}</p>
+    <p class="note"><a href="${lang === 'tr' ? '/tr' : ''}/supply/buyback/">${t('tracker.fl.link', lang)}</a></p>
+  </section>
+` : '';
+
+  const embedSnippet = embedUrl
+    ? `<iframe src="${embedUrl}" title="${t('tracker.embed.iframe.title', lang)}" width="480" height="300" loading="lazy" referrerpolicy="no-referrer"></iframe>`
+    : '';
+  const share = embedUrl ? `
+  <section class="sec" id="trk-share" aria-labelledby="trk-share-h">
+    <header class="sec-head rv">
+      <span class="idx">${idx()}</span>
+      <h2 id="trk-share-h">${t('tracker.share.h2', lang)}</h2>
+      <p>${t('tracker.share.p', lang)}</p>
+    </header>
+    <div class="trk-share rv">
+      <figure class="trk-card">
+        <img src="${escapeHtml(card ? card.url : '/og-tracker.png')}" width="1200" height="630" loading="lazy" alt="${t('tracker.share.card.alt', lang)}">
+        ${card && card.asOf ? `<figcaption class="note">${t('tracker.share.card.asof', lang).replace('{date}', escapeHtml(card.asOf))}</figcaption>` : ''}
+      </figure>
+      <div class="trk-embed">
+        <div class="cta">
+          <a class="btn" href="${escapeHtml(card ? card.url : '/og-tracker.png')}" download="quaiaxe-tracker.png">${t('tracker.share.card.download', lang)}</a>
+          <button type="button" class="btn" id="trk-share-link" hidden>${t('tracker.share.link', lang)}</button>
+        </div>
+        <h3 class="trk-h3">${t('tracker.embed.h3', lang)}</h3>
+        <p class="note">${t('tracker.embed.p', lang)}</p>
+        <label class="tag" for="trk-embed-code">${t('tracker.embed.label', lang)}</label>
+        <textarea id="trk-embed-code" class="trk-code" readonly rows="4" spellcheck="false">${escapeHtml(embedSnippet)}</textarea>
+        <div class="cta">
+          <button type="button" class="btn btn-hot" id="trk-embed-copy">${t('tracker.embed.copy', lang)}</button>
+          <span class="tag" id="trk-embed-status" role="status"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+` : '';
+
+  let n = 0;
+  const body = `
   <script type="application/json" id="trk-i18n">${jsonForScript(i18n)}</script>
-  <script type="application/json" id="trk-config">${jsonForScript({ trackedAddresses: config.trackedAddresses || [], stratumxApi: config.stratumxApi, rpc: config.rpc, vault: config.vault, qaxeToken: config.qaxeToken })}</script>
-  <header class="page-head">
-    <span class="tag hot">${t('tracker.eyebrow', lang)}</span>
-    <h1>${t('tracker.h1', lang)}</h1>
-    <p class="lede">${t('tracker.lede', lang)}</p>
-    <div class="tag" id="trk-live-tag">${t('tracker.updated', lang)}</div>
+  <script type="application/json" id="trk-config">${jsonForScript({ trackedAddresses: config.trackedAddresses || [], stratumxApi: config.stratumxApi, rpc: config.rpc, vault: config.vault, qaxeToken: config.qaxeToken })}</script>${dataBlock}
+  <header class="page-head trk-head">
+    <div class="trk-head-copy">
+      <span class="tag hot">${t('tracker.eyebrow', lang)}</span>
+      <h1>${t('tracker.h1', lang)}</h1>
+      <p class="lede">${t('tracker.lede', lang)}</p>
+      <div class="trk-live">
+        <span class="tag" id="trk-live-tag">${t('tracker.updated', lang)}</span>
+        <span class="tag trk-conn" id="trk-conn">${t('tracker.conn.poll', lang)}</span>
+      </div>
+      ${telegram ? `<div class="cta"><a class="btn btn-hot" href="${escapeHtml(telegram)}" target="_blank" rel="noopener">${t('tracker.telegram.cta', lang)}</a></div>` : ''}
+    </div>
+    <div class="trk-proof rv">
+      <div><span class="tag hot">${t('tracker.proof.burn.label', lang)}</span><h3 class="mono trk-fig trk-fig-hot" id="trk-p-burn">—</h3><p>${t('tracker.proof.burn.sub', lang)}</p></div>
+      <div><span class="tag hot">${t('tracker.proof.hr.label', lang)}</span><h3 class="mono trk-fig" id="trk-p-hr">—</h3><p>${t('tracker.proof.hr.sub', lang)}</p></div>
+      <div><span class="tag hot">${t('tracker.proof.ws.label', lang)}</span><h3 class="mono trk-fig" id="trk-p-ws">—</h3><p>${t('tracker.proof.ws.sub', lang)}</p></div>
+    </div>
   </header>
+
+  <div class="trk-strip-wrap rv">
+    <div class="trk-strip" id="trk-strip" role="img" aria-label="${t('tracker.strip.aria', lang)}">${'<i></i>'.repeat(STRIP_CELLS)}</div>
+    <p class="tag trk-strip-cap">${t('tracker.strip.cap', lang)}</p>
+  </div>
+
+  <section class="sec trk-sec-tight" id="trk-feed-sec" aria-labelledby="trk-feed-h">
+    <header class="sec-head rv">
+      <span class="idx">LIVE</span>
+      <h2 id="trk-feed-h">${t('tracker.feed.h2', lang)}</h2>
+      <p>${t('tracker.feed.p', lang)}</p>
+    </header>
+    <ol class="trk-feed rv" id="trk-feed" aria-live="off"><li class="trk-feed-empty" id="trk-feed-empty">${t('tracker.feed.empty', lang)}</li></ol>
+  </section>
 
   <section class="sec" aria-labelledby="trk-miners-h">
     <header class="sec-head rv">
-      <span class="idx">01</span>
+      <span class="idx">${idx()}</span>
       <h2 id="trk-miners-h">${t('tracker.miners.h2', lang)}</h2>
     </header>
     <div class="plate rv" id="trk-miner-stats">
@@ -78,6 +236,23 @@ export function renderTracker(lang, config) {
       ${tile(lang, t('tracker.shares.stale.label', lang), 'trk-sh-stale', 'tracker.shares.stale.label')}
       ${tile(lang, t('tracker.shares.invalid.label', lang), 'trk-sh-invalid', 'tracker.shares.invalid.label')}
       ${tile(lang, t('tracker.miners.total.label', lang), 'trk-total', 'tracker.miners.online.label')}
+    </div>
+    <div class="trk-sub rv">
+      <h3 class="trk-h3">${t('tracker.top.h2', lang)}</h3>
+      <p class="note">${t('tracker.top.p', lang)}</p>
+      <div class="dtable trk-gap">
+        <table>
+          <thead><tr>
+            <th>${t('tracker.top.rank', lang)}</th>
+            <th>${t('tracker.top.rig', lang)}</th>
+            <th>${t('tracker.top.miner', lang)}</th>
+            <th>${t('tracker.table.algorithm', lang)}</th>
+            <th>${t('tracker.table.hashrate', lang)}</th>
+            <th>${t('tracker.top.share', lang)}</th>
+          </tr></thead>
+          <tbody id="trk-top-body"><tr><td colspan="6">${t('tracker.loading', lang)}</td></tr></tbody>
+        </table>
+      </div>
     </div>
     <div class="dtable rv trk-gap">
       <table>
@@ -94,9 +269,21 @@ export function renderTracker(lang, config) {
     </div>
   </section>
 
+  <section class="sec" aria-labelledby="trk-chart-h">
+    <header class="sec-head rv">
+      <span class="idx">${idx()}</span>
+      <h2 id="trk-chart-h">${t('tracker.chart.h2', lang)}</h2>
+    </header>
+    ${tabs(lang, 'trk-hr-tabs', RANGES, '24h')}
+    <div class="chart rv" id="trk-chart" role="img" aria-label="${t('tracker.chart.aria', lang)}">
+      <p class="note" id="trk-chart-status">${t('tracker.loading', lang)}</p>
+    </div>
+    <p class="tag trk-readout" id="trk-chart-readout">&nbsp;</p>
+  </section>
+
   <section class="sec" aria-labelledby="trk-ws-h">
     <header class="sec-head rv">
-      <span class="idx">02</span>
+      <span class="idx">${idx()}</span>
       <h2 id="trk-ws-h">${t('tracker.workshares.h2', lang)}</h2>
       <p>${t('tracker.workshares.p', lang)}</p>
     </header>
@@ -104,6 +291,15 @@ export function renderTracker(lang, config) {
       ${tile(lang, t('tracker.workshares.count24h', lang), 'trk-ws-24h', 'tracker.workshares.count24h')}
       ${tile(lang, t('tracker.workshares.luck.avg', lang), 'trk-luck-avg', 'tracker.workshares.luck.avg')}
       ${tile(lang, t('tracker.workshares.luck.best', lang), 'trk-luck-best', 'tracker.workshares.luck.best')}
+    </div>
+    <div class="trk-sub rv">
+      <h3 class="trk-h3">${t('tracker.luck.h3', lang)}</h3>
+      <p class="note">${t('tracker.luck.p', lang)}</p>
+      ${tabs(lang, 'trk-ws-tabs', ['24h', '7d'], '24h')}
+      <div class="chart" id="trk-luck-chart" role="img" aria-label="${t('tracker.luck.aria', lang)}">
+        <p class="note" id="trk-luck-status">${t('tracker.loading', lang)}</p>
+      </div>
+      <p class="tag trk-readout" id="trk-luck-readout">&nbsp;</p>
     </div>
     <div class="dtable rv trk-gap">
       <table>
@@ -118,20 +314,9 @@ export function renderTracker(lang, config) {
     </div>
   </section>
 
-  <section class="sec" aria-labelledby="trk-chart-h">
-    <header class="sec-head rv">
-      <span class="idx">03</span>
-      <h2 id="trk-chart-h">${t('tracker.chart.h2', lang)}</h2>
-    </header>
-    <div class="chart rv" id="trk-chart" role="img" aria-label="${t('tracker.chart.aria', lang)}">
-      <p class="note" id="trk-chart-status">${t('tracker.loading', lang)}</p>
-    </div>
-    <p class="tag" id="trk-chart-readout">&nbsp;</p>
-  </section>
-
   <section class="sec" aria-labelledby="trk-rewards-h">
     <header class="sec-head rv">
-      <span class="idx">04</span>
+      <span class="idx">${idx()}</span>
       <h2 id="trk-rewards-h">${t('tracker.rewards.h2', lang)}</h2>
     </header>
     <div class="plate rv">
@@ -141,11 +326,25 @@ export function renderTracker(lang, config) {
       ${tile(lang, t('tracker.rewards.burned.label', lang), 'trk-burned', 'home.band.burned.loading')}
     </div>
     <p class="note"><a href="https://quaiscan.io/address/${config.vault || ''}" target="_blank" rel="noopener">${t('tracker.rewards.burned.link', lang)}</a></p>
+    <div class="trk-sub rv">
+      <h3 class="trk-h3">${t('tracker.schedule.h3', lang)}</h3>
+      <p class="note">${t('tracker.schedule.p', lang)}</p>
+      <div class="dtable trk-gap">
+        <table>
+          <thead><tr>
+            <th>${t('tracker.schedule.day', lang)}</th>
+            <th>${t('tracker.schedule.count', lang)}</th>
+            <th>${t('tracker.schedule.unlock', lang)}</th>
+          </tr></thead>
+          <tbody id="trk-schedule-body"><tr><td colspan="3">${t('tracker.loading', lang)}</td></tr></tbody>
+        </table>
+      </div>
+    </div>${burnChart}
   </section>
-
+${feeLoop}
   <section class="sec" aria-labelledby="trk-check-h">
     <header class="sec-head rv">
-      <span class="idx">05</span>
+      <span class="idx">${idx()}</span>
       <h2 id="trk-check-h">${t('tracker.check.h2', lang)}</h2>
       <p>${t('tracker.check.p', lang)}</p>
     </header>
@@ -158,8 +357,10 @@ export function renderTracker(lang, config) {
       <button type="button" class="btn btn-hot" id="trk-check-go">${t('tracker.check.go', lang)}</button>
     </div>
     <p class="tag trk-showing" id="trk-check-showing">${t('tracker.check.showing', lang)} <b id="trk-check-addr-out">—</b></p>
+    <p class="trk-showing"><button type="button" class="btn" id="trk-check-reset" hidden>${t('tracker.check.reset', lang)}</button></p>
   </section>
-`;
+${share}`;
+  return body.replace(/__IDX__/g, () => String(++n).padStart(2, '0'));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -174,13 +375,18 @@ export function originOf(url) {
   return u.origin;
 }
 
+/** The secure WebSocket origin of the same host and port as an https config URL (the live feed uses the RPC's socket). */
+export function wssOrigin(url) {
+  return originOf(url).replace(/^https:/, 'wss:');
+}
+
 /**
- * The CSP: scripts, styles, fonts and everything else from this origin only, and fetches to exactly the two hosts
- * the page reads (the Quai RPC and the pool API, from the config). `meta: true` leaves out frame-ancestors, which
+ * The CSP: scripts, styles, fonts and everything else from this origin only, and fetches to exactly what the page reads
+ * (the Quai RPC, its WebSocket for the live feed, and the pool API, from the config). `meta: true` leaves out frame-ancestors, which
  * a <meta> tag cannot carry.
  */
 export function contentSecurityPolicy(config, { meta = false } = {}) {
-  const connect = ["'self'", ...new Set([originOf(config.rpc), originOf(config.stratumxApi)])];
+  const connect = ["'self'", ...new Set([originOf(config.rpc), wssOrigin(config.rpc), originOf(config.stratumxApi)])];
   const directives = [
     "default-src 'self'",
     `connect-src ${connect.join(' ')}`,
